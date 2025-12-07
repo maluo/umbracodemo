@@ -1,0 +1,27 @@
+﻿@using Umbraco.Extensions
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage<Umbraco.Cms.Core.Models.Blocks.BlockGridItem>
+@{
+    if (Model?.Areas.Any() != true) { return; }
+}
+@foreach (var area in Model.Areas)
+{
+    @* <div class="col-lg-4 mb-5 mb-lg-0">
+        <h4 class="text-uppercase mb-4">Location</h4>
+        <p class="lead mb-0">
+            2215 John Daniel Drive
+            <br />
+            Clark, MO 65243
+        </p>
+    </div> *@
+    <div class="col-lg-4 mb-5 mb-lg-0">
+        @await Html.GetBlockGridItemAreaHtmlAsync(area)
+    </div>
+
+}
+
+
+@* <div class="umb-block-grid"
+     data-grid-columns="@(Model.GridColumns?.ToString() ?? "12");"
+     style="--umb-block-grid--grid-columns: @(Model.GridColumns?.ToString() ?? "12");">
+    @await Html.GetBlockGridItemsHtmlAsync(Model)
+</div> *@
