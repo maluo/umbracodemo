@@ -1,0 +1,68 @@
+@model IEnumerable<Umbraco13.Models.Fund>
+
+<div id="funds-table-container">
+    @if (Model != null && Model.Any())
+    {
+        var funds = Model.ToList();
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Attribute</th>
+                    @foreach (var fund in funds)
+                    {
+                        <th>@fund.FundName</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Ticker Code</strong></td>
+                    @foreach (var fund in funds)
+                    {
+                        <td>@fund.TickerCode</td>
+                    }
+                </tr>
+                <tr>
+                    <td><strong>NAV Price</strong></td>
+                    @foreach (var fund in funds)
+                    {
+                        <td>@fund.NavPrice.ToString("C")</td>
+                    }
+                </tr>
+                <tr>
+                    <td><strong>Market Price</strong></td>
+                    @foreach (var fund in funds)
+                    {
+                        <td>@fund.MarketPrice.ToString("C")</td>
+                    }
+                </tr>
+                <tr>
+                    <td><strong>Hold in Trust</strong></td>
+                    @foreach (var fund in funds)
+                    {
+                        <td>@fund.HoldInTrust</td>
+                    }
+                </tr>
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p>No funds data available.</p>
+    }
+</div>
+
+<script>
+    // Function to reload the funds table
+    function reloadFundsTable() {
+        fetch('/funds/update-table')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('funds-table-container').innerHTML = html;
+            })
+            .catch(error => console.error('Error reloading funds table:', error));
+    }
+
+    // Reload every 20 minutes (20 * 60 * 1000 ms)
+    setInterval(reloadFundsTable, 20 * 60 * 1000);
+</script>

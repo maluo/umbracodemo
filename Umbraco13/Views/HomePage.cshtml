@@ -5,6 +5,7 @@
 
 @await Html.PartialAsync("nav")
 @await Html.PartialAsync("header")
+@await Component.InvokeAsync("FundsTable")
 @await Html.PartialAsync("portfolio")
 @await Html.PartialAsync("about")
 @await Html.PartialAsync("contact")
