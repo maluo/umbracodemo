@@ -1,10 +1,11 @@
 @model IEnumerable<Umbraco13.Models.Fund>
 
-<div id="funds-table-container">
+<div id="funds-table-container" style="margin: 0 auto; width: 70%; max-width: 100%;">
     @if (Model != null && Model.Any())
     {
         var funds = Model.ToList();
-        <table class="table table-striped">
+        <div class="table-responsive">
+            <table class="table table-striped">
             <thead>
                 <tr>
                     <th>Attribute</th>
@@ -44,7 +45,8 @@
                     }
                 </tr>
             </tbody>
-        </table>
+            </table>
+        </div>
     }
     else
     {
