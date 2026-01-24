@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Umbraco13.Helpers;
+using Umbraco13.Models;
 using Umbraco13.Services;
 
 namespace Umbraco13.ViewComponents;
@@ -15,6 +17,7 @@ public class FundsTableViewComponent : ViewComponent
     public async Task<IViewComponentResult> InvokeAsync()
     {
         var funds = await _fundService.GetAllFundsAsync();
-        return View(funds);
+        var tableData = FundTableConverter.ToTableData(funds);
+        return View(tableData);
     }
 }
