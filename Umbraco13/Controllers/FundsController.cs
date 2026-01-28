@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
+using System.Text;
 using Umbraco.Cms.Web.Common.Controllers;
 using Umbraco13.Services;
 
@@ -129,5 +130,76 @@ public class FundsController : UmbracoController
             }
             return StatusCode(500, $"An error occurred: {ex.Message}");
         }
+    }
+
+    [HttpGet("exporttocsv")]
+    public async Task<IActionResult> ExportToCsv()
+    {
+        try
+        {
+            var funds = await _fundService.GetAllFundsAsync();
+
+            // Use StringBuilder to build CSV content
+            var csvBuilder = new StringBuilder();
+
+            // Header Section
+            csvBuilder.AppendLine("FUND SUMMARY REPORT");
+            csvBuilder.AppendLine($"Generated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            csvBuilder.AppendLine();
+
+            // Table Header Row
+            csvBuilder.AppendLine("Fund Name,Ticker Code,NAV Price,Market Price,Hold In Trust");
+
+            // Data Rows
+            foreach (var fund in funds)
+            {
+                // Escape values that contain commas or quotes
+                string fundName = EscapeCsvValue(fund.FundName);
+                string tickerCode = EscapeCsvValue(fund.TickerCode);
+                string navPrice = fund.NavPrice.ToString();
+                string marketPrice = fund.MarketPrice.ToString();
+                string holdInTrust = fund.HoldInTrust ?? "";
+
+                csvBuilder.AppendLine($"{fundName},{tickerCode},{navPrice},{marketPrice},{holdInTrust}");
+            }
+
+            // Footer Section (span all 5 columns)
+            csvBuilder.AppendLine();
+            csvBuilder.AppendLine("END OF REPORT,,,,");
+            csvBuilder.AppendLine($"Total Funds: {funds.Count},,,,");
+            csvBuilder.AppendLine("This document is confidential and intended for internal use only.,,,,");
+
+            var csvBytes = Encoding.UTF8.GetBytes(csvBuilder.ToString());
+
+            return File(
+                csvBytes,
+                "text/csv",
+                $"Funds_Export_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting funds to CSV: {Message}", ex.Message);
+            _logger.LogError(ex, "Stack trace: {StackTrace}", ex.StackTrace);
+            if (ex.InnerException != null)
+            {
+                _logger.LogError(ex, "Inner exception: {InnerMessage}", ex.InnerException.Message);
+            }
+            return StatusCode(500, $"An error occurred: {ex.Message}");
+        }
+    }
+
+    private string EscapeCsvValue(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return "";
+
+        // If value contains comma, quote, or newline, wrap in quotes and escape quotes
+        if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
+        {
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        }
+
+        return value;
     }
 }
