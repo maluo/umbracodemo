@@ -1,28 +1,28 @@
-@model Umbraco13.Models.TableData
+@model Umbraco13.Models.FundsTableViewModel
 
 <div id="funds-table-container" style="margin: 40px auto 0 auto; width: 70%; max-width: 100%;">
     <!-- Download Buttons -->
     <div style="margin-bottom: 15px; text-align: right;">
-        <a href="/funds/exporttopdf" class="btn btn-danger" style="text-decoration: none; margin-right: 10px;">
+        <a href="#" id="download-pdf" class="btn btn-danger" style="text-decoration: none; margin-right: 10px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf" viewBox="0 0 16 16" style="margin-right: 5px; vertical-align: text-bottom;">
                 <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
             </svg>
             Download PDF
         </a>
-        <a href="/funds/exporttocsv" class="btn btn-primary" style="text-decoration: none; margin-right: 10px;">
+        <a href="#" id="download-csv" class="btn btn-primary" style="text-decoration: none; margin-right: 10px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-csv" viewBox="0 0 16 16" style="margin-right: 5px; vertical-align: text-bottom;">
                 <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
             </svg>
             Download CSV
         </a>
-        <a href="/funds/exporttoexcel-free" class="btn btn-success" style="text-decoration: none; margin-right: 10px;">
+        <a href="#" id="download-excel-free" class="btn btn-success" style="text-decoration: none; margin-right: 10px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel" viewBox="0 0 16 16" style="margin-right: 5px; vertical-align: text-bottom;">
                 <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.78l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.22 5.884 6.68z"/>
                 <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
             </svg>
             Download Excel (Free)
         </a>
-        <a href="/funds/exporttoexcel" class="btn btn-success" style="text-decoration: none;">
+        <a href="#" id="download-excel-epplus" class="btn btn-success" style="text-decoration: none;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel" viewBox="0 0 16 16" style="margin-right: 5px; vertical-align: text-bottom;">
                 <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.78l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.22 5.884 6.68z"/>
                 <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
@@ -31,13 +31,13 @@
         </a>
     </div>
 
-    @if (Model != null && Model.Cells != null && Model.Cells.Count > 0)
+    @if (Model.TableData != null && Model.TableData.Cells != null && Model.TableData.Cells.Count > 0)
     {
         <div class="table-responsive">
-            <table class="@Model.TableClass">
+            <table class="@Model.TableData.TableClass">
             <thead>
                 @{
-                    var firstRow = Model.Cells.FirstOrDefault();
+                    var firstRow = Model.TableData.Cells.FirstOrDefault();
                     if (firstRow != null && firstRow.Any(c => c.Type == Umbraco13.Models.TableCellType.Th))
                     {
                         <tr class="table-light">
@@ -53,7 +53,7 @@
                 }
             </thead>
             <tbody>
-                @foreach (var row in Model.Cells)
+                @foreach (var row in Model.TableData.Cells)
                 {
                     // Skip header row (rows with TH cells in first position)
                     if (row.FirstOrDefault()?.Type != Umbraco13.Models.TableCellType.Th)
@@ -77,16 +77,92 @@
 </div>
 
 <script>
-    // Function to reload the funds table
-    function reloadFundsTable() {
-        fetch('/funds/update-table')
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('funds-table-container').innerHTML = html;
+    let API_KEY = '';
+    let currentTokenVersion = '';
+
+    // Fetch API key from server
+    function fetchApiKey() {
+        return fetch('/funds/api-key')
+            .then(response => response.json())
+            .then(data => {
+                API_KEY = data.apiKey;
+                return API_KEY;
             })
-            .catch(error => console.error('Error reloading funds table:', error));
+            .catch(error => {
+                console.error('Error fetching API key:', error);
+                return '';
+            });
     }
 
-    // Reload every 20 minutes (20 * 60 * 1000 ms)
-    setInterval(reloadFundsTable, 20 * 60 * 1000);
+    // Update download links with new tokens
+    function updateDownloadLinks(tokens) {
+        document.getElementById('download-pdf').href = '/funds/exporttopdf?token=' + tokens.pdf;
+        document.getElementById('download-csv').href = '/funds/exporttocsv?token=' + tokens.csv;
+        document.getElementById('download-excel-free').href = '/funds/exporttoexcel-free?token=' + tokens.excel;
+        document.getElementById('download-excel-epplus').href = '/funds/exporttoexcel?token=' + tokens.excelEpPlus;
+        console.log('Download links updated with new tokens, version:', tokens.version);
+    }
+
+    // Fetch download tokens and update links
+    function fetchAndUpdateTokens() {
+        fetch('/funds/download-tokens')
+            .then(response => response.json())
+            .then(tokens => {
+                currentTokenVersion = tokens.version;
+                updateDownloadLinks(tokens);
+            })
+            .catch(error => console.error('Error fetching download tokens:', error));
+    }
+
+    // Check if token version has changed
+    function checkTokenVersion() {
+        fetch('/funds/token-version')
+            .then(response => response.json())
+            .then(data => {
+                if (data.version !== currentTokenVersion) {
+                    console.log('Token version changed from', currentTokenVersion, 'to', data.version);
+                    fetchAndUpdateTokens();
+                }
+            })
+            .catch(error => console.error('Error checking token version:', error));
+    }
+
+    // Function to reload the funds table with API key authentication
+    function reloadFundsTable() {
+        fetchApiKey().then(apiKey => {
+            if (!apiKey) {
+                console.error('No API key available');
+                return;
+            }
+
+            fetch('/funds/update-table', {
+                headers: {
+                    'X-API-Key': apiKey
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to update table: ' + response.status);
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('funds-table-container').innerHTML = html;
+                    // Re-fetch tokens after table reload
+                    fetchAndUpdateTokens();
+                })
+                .catch(error => console.error('Error reloading funds table:', error));
+        });
+    }
+
+    // Initialize: fetch API key, then tokens
+    fetchApiKey().then(() => {
+        fetchAndUpdateTokens();
+    });
+
+    // Poll for token version changes every 30 seconds
+    setInterval(checkTokenVersion, 30000);
+
+    // Reload funds table every 15 minutes
+    setInterval(reloadFundsTable, 15 * 60 * 1000);
 </script>

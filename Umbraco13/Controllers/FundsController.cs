@@ -1,10 +1,12 @@
 using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using System.Text;
 using Umbraco.Cms.Web.Common.Controllers;
+using Umbraco13.Authorization;
 using Umbraco13.Services;
 
 namespace Umbraco13.Controllers;
@@ -14,11 +16,15 @@ public class FundsController : UmbracoController
 {
     private readonly IFundService _fundService;
     private readonly ILogger<FundsController> _logger;
+    private readonly IDownloadTokenService _downloadTokenService;
+    private readonly IConfiguration _configuration;
 
-    public FundsController(IFundService fundService, ILogger<FundsController> logger)
+    public FundsController(IFundService fundService, ILogger<FundsController> logger, IDownloadTokenService downloadTokenService, IConfiguration configuration)
     {
         _fundService = fundService;
         _logger = logger;
+        _downloadTokenService = downloadTokenService;
+        _configuration = configuration;
     }
 
     [HttpGet("update-table")]
@@ -28,7 +34,59 @@ public class FundsController : UmbracoController
         return ViewComponent("FundsTable");
     }
 
+    [HttpGet("download-tokens")]
+    [AllowAnonymous]
+    public IActionResult GetDownloadTokens()
+    {
+        return Ok(new
+        {
+            version = _downloadTokenService.CurrentVersion,
+            pdf = _downloadTokenService.GenerateDownloadToken("pdf"),
+            csv = _downloadTokenService.GenerateDownloadToken("csv"),
+            excel = _downloadTokenService.GenerateDownloadToken("excel-free"),
+            excelEpPlus = _downloadTokenService.GenerateDownloadToken("excel")
+        });
+    }
+
+    [HttpGet("token-version")]
+    [AllowAnonymous]
+    public IActionResult GetTokenVersion()
+    {
+        return Ok(new { version = _downloadTokenService.CurrentVersion });
+    }
+
+    [HttpGet("api-key")]
+    [AllowAnonymous]
+    public IActionResult GetApiKey()
+    {
+        var apiKey = _configuration.GetValue<string>("ApiKeyAuthentication:ApiKey");
+        return Ok(new { apiKey });
+    }
+
+    [HttpGet("test-token")]
+    [AllowAnonymous]
+    public IActionResult TestToken(string? token = null, string type = "pdf")
+    {
+        if (string.IsNullOrEmpty(token))
+        {
+            var newToken = _downloadTokenService.GenerateDownloadToken(type);
+            return Ok(new { token = newToken, type, message = "Generated new token" });
+        }
+
+        var isValid = _downloadTokenService.ValidateDownloadToken(token, type);
+        return Ok(new { token, type, isValid, message = isValid ? "Token is valid" : "Token is invalid" });
+    }
+
+    [HttpGet("all-tokens")]
+    [AllowAnonymous]
+    public IActionResult GetAllTokens()
+    {
+        var tokens = _downloadTokenService.GenerateDownloadToken("all");
+        return Ok(new { message = "Use /funds/download-tokens to get tokens" });
+    }
+
     [HttpGet("exporttoexcel")]
+    [ValidateDownloadToken("excel")]
     public async Task<IActionResult> ExportToExcel()
     {
         try
@@ -136,6 +194,7 @@ public class FundsController : UmbracoController
     }
 
     [HttpGet("exporttocsv")]
+    [ValidateDownloadToken("csv")]
     public async Task<IActionResult> ExportToCsv()
     {
         try
@@ -193,6 +252,7 @@ public class FundsController : UmbracoController
     }
 
     [HttpGet("exporttoexcel-free")]
+    [ValidateDownloadToken("excel-free")]
     public async Task<IActionResult> ExportToExcelFree()
     {
         try
@@ -296,6 +356,7 @@ public class FundsController : UmbracoController
     }
 
     [HttpGet("exporttopdf")]
+    [ValidateDownloadToken("pdf")]
     public async Task<IActionResult> ExportToPdf()
     {
         try

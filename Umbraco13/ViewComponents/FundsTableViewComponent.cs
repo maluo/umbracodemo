@@ -18,6 +18,12 @@ public class FundsTableViewComponent : ViewComponent
     {
         var funds = await _fundService.GetAllFundsAsync();
         var tableData = FundTableConverter.ToTableData(funds);
-        return View(tableData);
+
+        var viewModel = new FundsTableViewModel
+        {
+            TableData = tableData
+        };
+
+        return View(viewModel);
     }
 }
