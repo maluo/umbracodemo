@@ -1,5 +1,8 @@
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
+using PdfSharp.Drawing;
+using PdfSharp.Pdf;
 using System.Text;
 using Umbraco.Cms.Web.Common.Controllers;
 using Umbraco13.Services;
@@ -163,11 +166,11 @@ public class FundsController : UmbracoController
                 csvBuilder.AppendLine($"{fundName},{tickerCode},{navPrice},{marketPrice},{holdInTrust}");
             }
 
-            // Footer Section (span all 5 columns)
+            // Footer Section
             csvBuilder.AppendLine();
-            csvBuilder.AppendLine("END OF REPORT,,,,");
-            csvBuilder.AppendLine($"Total Funds: {funds.Count},,,,");
-            csvBuilder.AppendLine("This document is confidential and intended for internal use only.,,,,");
+            csvBuilder.AppendLine("END OF REPORT");
+            csvBuilder.AppendLine($"Total Funds: {funds.Count}");
+            csvBuilder.AppendLine("This document is confidential and intended for internal use only.");
 
             var csvBytes = Encoding.UTF8.GetBytes(csvBuilder.ToString());
 
@@ -180,6 +183,244 @@ public class FundsController : UmbracoController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error exporting funds to CSV: {Message}", ex.Message);
+            _logger.LogError(ex, "Stack trace: {StackTrace}", ex.StackTrace);
+            if (ex.InnerException != null)
+            {
+                _logger.LogError(ex, "Inner exception: {InnerMessage}", ex.InnerException.Message);
+            }
+            return StatusCode(500, $"An error occurred: {ex.Message}");
+        }
+    }
+
+    [HttpGet("exporttoexcel-free")]
+    public async Task<IActionResult> ExportToExcelFree()
+    {
+        try
+        {
+            var funds = await _fundService.GetAllFundsAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Funds");
+
+            // Header Section (rows 1-4)
+            worksheet.Cell("A1").Value = "FUND SUMMARY REPORT";
+            worksheet.Range("A1:E1").Merge();
+            worksheet.Cell("A1").Style.Font.Bold = true;
+            worksheet.Cell("A1").Style.Font.FontSize = 16;
+            worksheet.Cell("A1").Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            worksheet.Cell("A2").Value = "Generated on: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            worksheet.Range("A2:E2").Merge();
+            worksheet.Cell("A2").Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            worksheet.Range("A3:E3").Merge();
+
+            // Table Header Row (row 4)
+            worksheet.Cell("A4").Value = "Fund Name";
+            worksheet.Cell("B4").Value = "Ticker Code";
+            worksheet.Cell("C4").Value = "NAV Price";
+            worksheet.Cell("D4").Value = "Market Price";
+            worksheet.Cell("E4").Value = "Hold In Trust";
+
+            // Style the header row
+            var headerRange = worksheet.Range("A4:E4");
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            headerRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            // Data Rows
+            int row = 5;
+            foreach (var fund in funds)
+            {
+                worksheet.Cell(row, 1).Value = fund.FundName;
+                worksheet.Cell(row, 2).Value = fund.TickerCode;
+                worksheet.Cell(row, 3).Value = fund.NavPrice;
+                worksheet.Cell(row, 4).Value = fund.MarketPrice;
+                worksheet.Cell(row, 5).Value = fund.HoldInTrust;
+
+                // Center align the numeric values
+                worksheet.Cell(row, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(row, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(row, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                // Add borders to data row
+                var dataRange = worksheet.Range(row, 1, row, 5);
+                dataRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                dataRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+                row++;
+            }
+
+            // Auto-fit columns
+            worksheet.Columns().AdjustToContents();
+
+            // Footer Section (starts after data)
+            int footerStartRow = row + 2;
+
+            worksheet.Cell(footerStartRow, 1).Value = "END OF REPORT";
+            worksheet.Range(footerStartRow, 1, footerStartRow, 5).Merge();
+            worksheet.Cell(footerStartRow, 1).Style.Font.Bold = true;
+            worksheet.Cell(footerStartRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            worksheet.Cell(footerStartRow + 1, 1).Value = $"Total Funds: {funds.Count}";
+            worksheet.Range(footerStartRow + 1, 1, footerStartRow + 1, 5).Merge();
+            worksheet.Cell(footerStartRow + 1, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            worksheet.Cell(footerStartRow + 2, 1).Value = "This document is confidential and intended for internal use only.";
+            worksheet.Range(footerStartRow + 2, 1, footerStartRow + 2, 5).Merge();
+            worksheet.Cell(footerStartRow + 2, 1).Style.Font.Italic = true;
+            worksheet.Cell(footerStartRow + 2, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var excelBytes = stream.ToArray();
+
+            return File(
+                excelBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Funds_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting funds to Excel (ClosedXML): {Message}", ex.Message);
+            _logger.LogError(ex, "Stack trace: {StackTrace}", ex.StackTrace);
+            if (ex.InnerException != null)
+            {
+                _logger.LogError(ex, "Inner exception: {InnerMessage}", ex.InnerException.Message);
+            }
+            return StatusCode(500, $"An error occurred: {ex.Message}");
+        }
+    }
+
+    [HttpGet("exporttopdf")]
+    public async Task<IActionResult> ExportToPdf()
+    {
+        try
+        {
+            var funds = await _fundService.GetAllFundsAsync();
+
+            // Create PDF document
+            var document = new PdfDocument();
+            var page = document.AddPage();
+            page.Size = PdfSharp.PageSize.A4;
+
+            var gfx = XGraphics.FromPdfPage(page);
+            var font = new XFont("Arial", 10);
+            var fontBold = new XFont("Arial", 10);
+            var fontHeader = new XFont("Arial", 20);
+            var fontFooter = new XFont("Arial", 8);
+
+            // Define table dimensions
+            double marginLeft = 50;
+            double marginTop = 80;
+            double rowHeight = 25;
+            double colWidth1 = 150;
+            double colWidth2 = 100;
+            double colWidth3 = 80;
+            double colWidth4 = 80;
+            double colWidth5 = 100;
+
+            // Header Section
+            gfx.DrawString("FUND SUMMARY REPORT", fontHeader, XBrushes.Black,
+                new XRect(0, 30, page.Width, 40), XStringFormats.TopCenter);
+            gfx.DrawString($"Generated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}", font, XBrushes.Black,
+                new XRect(0, 60, page.Width, 20), XStringFormats.TopCenter);
+
+            // Table Header
+            double yPos = marginTop;
+            XPen pen = new XPen(XColors.Gray, 0.5);
+            XBrush brushHeader = new XSolidBrush(XColor.FromArgb(224, 224, 224));
+            XBrush brushWhite = new XSolidBrush(XColors.White);
+
+            // Draw header cells
+            gfx.DrawRectangle(pen, brushHeader, marginLeft, yPos, colWidth1, rowHeight);
+            gfx.DrawString("Fund Name", fontBold, XBrushes.Black,
+                new XRect(marginLeft, yPos, colWidth1, rowHeight), XStringFormats.Center);
+
+            gfx.DrawRectangle(pen, brushHeader, marginLeft + colWidth1, yPos, colWidth2, rowHeight);
+            gfx.DrawString("Ticker Code", fontBold, XBrushes.Black,
+                new XRect(marginLeft + colWidth1, yPos, colWidth2, rowHeight), XStringFormats.Center);
+
+            gfx.DrawRectangle(pen, brushHeader, marginLeft + colWidth1 + colWidth2, yPos, colWidth3, rowHeight);
+            gfx.DrawString("NAV Price", fontBold, XBrushes.Black,
+                new XRect(marginLeft + colWidth1 + colWidth2, yPos, colWidth3, rowHeight), XStringFormats.Center);
+
+            gfx.DrawRectangle(pen, brushHeader, marginLeft + colWidth1 + colWidth2 + colWidth3, yPos, colWidth4, rowHeight);
+            gfx.DrawString("Market Price", fontBold, XBrushes.Black,
+                new XRect(marginLeft + colWidth1 + colWidth2 + colWidth3, yPos, colWidth4, rowHeight), XStringFormats.Center);
+
+            gfx.DrawRectangle(pen, brushHeader, marginLeft + colWidth1 + colWidth2 + colWidth3 + colWidth4, yPos, colWidth5, rowHeight);
+            gfx.DrawString("Hold In Trust", fontBold, XBrushes.Black,
+                new XRect(marginLeft + colWidth1 + colWidth2 + colWidth3 + colWidth4, yPos, colWidth5, rowHeight), XStringFormats.Center);
+
+            // Data Rows
+            yPos += rowHeight;
+
+            foreach (var fund in funds)
+            {
+                // Check if we need a new page
+                if (yPos + rowHeight > page.Height - 100)
+                {
+                    page = document.AddPage();
+                    page.Size = PdfSharp.PageSize.A4;
+                    gfx = XGraphics.FromPdfPage(page);
+                    yPos = marginTop;
+                }
+
+                // Fund Name
+                gfx.DrawRectangle(pen, brushWhite, marginLeft, yPos, colWidth1, rowHeight);
+                gfx.DrawString(fund.FundName, font, XBrushes.Black,
+                    new XRect(marginLeft + 5, yPos, colWidth1 - 10, rowHeight), XStringFormats.CenterLeft);
+
+                // Ticker Code
+                gfx.DrawRectangle(pen, brushWhite, marginLeft + colWidth1, yPos, colWidth2, rowHeight);
+                gfx.DrawString(fund.TickerCode, font, XBrushes.Black,
+                    new XRect(marginLeft + colWidth1, yPos, colWidth2, rowHeight), XStringFormats.Center);
+
+                // NAV Price
+                gfx.DrawRectangle(pen, brushWhite, marginLeft + colWidth1 + colWidth2, yPos, colWidth3, rowHeight);
+                gfx.DrawString(fund.NavPrice.ToString(), font, XBrushes.Black,
+                    new XRect(marginLeft + colWidth1 + colWidth2, yPos, colWidth3, rowHeight), XStringFormats.Center);
+
+                // Market Price
+                gfx.DrawRectangle(pen, brushWhite, marginLeft + colWidth1 + colWidth2 + colWidth3, yPos, colWidth4, rowHeight);
+                gfx.DrawString(fund.MarketPrice.ToString(), font, XBrushes.Black,
+                    new XRect(marginLeft + colWidth1 + colWidth2 + colWidth3, yPos, colWidth4, rowHeight), XStringFormats.Center);
+
+                // Hold In Trust
+                gfx.DrawRectangle(pen, brushWhite, marginLeft + colWidth1 + colWidth2 + colWidth3 + colWidth4, yPos, colWidth5, rowHeight);
+                gfx.DrawString(fund.HoldInTrust ?? "", font, XBrushes.Black,
+                    new XRect(marginLeft + colWidth1 + colWidth2 + colWidth3 + colWidth4, yPos, colWidth5, rowHeight), XStringFormats.Center);
+
+                yPos += rowHeight;
+            }
+
+            // Footer Section
+            yPos = page.Height - 70;
+            gfx.DrawString("END OF REPORT", fontBold, XBrushes.Black,
+                new XRect(0, yPos, page.Width, 20), XStringFormats.TopCenter);
+            gfx.DrawString($"Total Funds: {funds.Count}", font, XBrushes.Black,
+                new XRect(0, yPos + 20, page.Width, 15), XStringFormats.TopCenter);
+            gfx.DrawString("This document is confidential and intended for internal use only.", fontFooter, XBrushes.Black,
+                new XRect(0, yPos + 35, page.Width, 15), XStringFormats.TopCenter);
+
+            // Save PDF to memory stream
+            using var stream = new MemoryStream();
+            document.Save(stream, false);
+            var pdfBytes = stream.ToArray();
+
+            return File(
+                pdfBytes,
+                "application/pdf",
+                $"Funds_Export_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting funds to PDF: {Message}", ex.Message);
             _logger.LogError(ex, "Stack trace: {StackTrace}", ex.StackTrace);
             if (ex.InnerException != null)
             {
