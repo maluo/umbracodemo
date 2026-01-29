@@ -4,6 +4,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Umbraco.Cms.Web.Common.Routing;
 using Umbraco13.Middleware;
+using PdfSharp.Fonts;
+using Umbraco13.Fonts;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +39,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+
+// Register PdfSharp font resolver
+GlobalFontSettings.FontResolver = new FontResolver();
 
 builder.CreateUmbracoBuilder()
     .AddBackOffice()

@@ -21,7 +21,8 @@ public class FundsTableViewComponent : ViewComponent
 
         var viewModel = new FundsTableViewModel
         {
-            TableData = tableData
+            TableData = tableData,
+            Funds = funds.ToList()
         };
 
         return View(viewModel);
