@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
 using PdfSharp.Drawing;
-using PdfSharp.Pdf;
 using System.Text;
 using Umbraco.Cms.Web.Common.Controllers;
 using Umbraco13.Authorization;
@@ -18,13 +17,15 @@ public class FundsController : UmbracoController
     private readonly ILogger<FundsController> _logger;
     private readonly IDownloadTokenService _downloadTokenService;
     private readonly IConfiguration _configuration;
+    private readonly IPdfExportService _pdfExportService;
 
-    public FundsController(IFundService fundService, ILogger<FundsController> logger, IDownloadTokenService downloadTokenService, IConfiguration configuration)
+    public FundsController(IFundService fundService, ILogger<FundsController> logger, IDownloadTokenService downloadTokenService, IConfiguration configuration, IPdfExportService pdfExportService)
     {
         _fundService = fundService;
         _logger = logger;
         _downloadTokenService = downloadTokenService;
         _configuration = configuration;
+        _pdfExportService = pdfExportService;
     }
 
     [HttpGet("update-table")]
@@ -363,115 +364,26 @@ public class FundsController : UmbracoController
         {
             var funds = await _fundService.GetAllFundsAsync();
 
-            // Create PDF document
-            var document = new PdfDocument();
-            var page = document.AddPage();
-            page.Size = PdfSharp.PageSize.A4;
-
-            var gfx = XGraphics.FromPdfPage(page);
-            var font = new XFont("Arial", 10);
-            var fontBold = new XFont("Arial", 10);
-            var fontHeader = new XFont("Arial", 20);
-            var fontFooter = new XFont("Arial", 8);
-
-            // Define table dimensions
-            double marginLeft = 50;
-            double marginTop = 80;
-            double rowHeight = 25;
-            double colWidth1 = 150;
-            double colWidth2 = 100;
-            double colWidth3 = 80;
-            double colWidth4 = 80;
-            double colWidth5 = 100;
-
-            // Header Section
-            gfx.DrawString("FUND SUMMARY REPORT", fontHeader, XBrushes.Black,
-                new XRect(0, 30, page.Width, 40), XStringFormats.TopCenter);
-            gfx.DrawString($"Generated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}", font, XBrushes.Black,
-                new XRect(0, 60, page.Width, 20), XStringFormats.TopCenter);
-
-            // Table Header
-            double yPos = marginTop;
-            XPen pen = new XPen(XColors.Gray, 0.5);
-            XBrush brushHeader = new XSolidBrush(XColor.FromArgb(224, 224, 224));
-            XBrush brushWhite = new XSolidBrush(XColors.White);
-
-            // Draw header cells
-            gfx.DrawRectangle(pen, brushHeader, marginLeft, yPos, colWidth1, rowHeight);
-            gfx.DrawString("Fund Name", fontBold, XBrushes.Black,
-                new XRect(marginLeft, yPos, colWidth1, rowHeight), XStringFormats.Center);
-
-            gfx.DrawRectangle(pen, brushHeader, marginLeft + colWidth1, yPos, colWidth2, rowHeight);
-            gfx.DrawString("Ticker Code", fontBold, XBrushes.Black,
-                new XRect(marginLeft + colWidth1, yPos, colWidth2, rowHeight), XStringFormats.Center);
-
-            gfx.DrawRectangle(pen, brushHeader, marginLeft + colWidth1 + colWidth2, yPos, colWidth3, rowHeight);
-            gfx.DrawString("NAV Price", fontBold, XBrushes.Black,
-                new XRect(marginLeft + colWidth1 + colWidth2, yPos, colWidth3, rowHeight), XStringFormats.Center);
-
-            gfx.DrawRectangle(pen, brushHeader, marginLeft + colWidth1 + colWidth2 + colWidth3, yPos, colWidth4, rowHeight);
-            gfx.DrawString("Market Price", fontBold, XBrushes.Black,
-                new XRect(marginLeft + colWidth1 + colWidth2 + colWidth3, yPos, colWidth4, rowHeight), XStringFormats.Center);
-
-            gfx.DrawRectangle(pen, brushHeader, marginLeft + colWidth1 + colWidth2 + colWidth3 + colWidth4, yPos, colWidth5, rowHeight);
-            gfx.DrawString("Hold In Trust", fontBold, XBrushes.Black,
-                new XRect(marginLeft + colWidth1 + colWidth2 + colWidth3 + colWidth4, yPos, colWidth5, rowHeight), XStringFormats.Center);
-
-            // Data Rows
-            yPos += rowHeight;
-
-            foreach (var fund in funds)
+            // Define columns for PDF export - other columns are compact to leave room for fund names
+            var columns = new List<PdfColumnDefinition>
             {
-                // Check if we need a new page
-                if (yPos + rowHeight > page.Height - 100)
-                {
-                    page = document.AddPage();
-                    page.Size = PdfSharp.PageSize.A4;
-                    gfx = XGraphics.FromPdfPage(page);
-                    yPos = marginTop;
-                }
+                new() { PropertyName = "FundName", HeaderText = "Fund Name", Alignment = XStringAlignment.Near },
+                new() { PropertyName = "TickerCode", HeaderText = "Ticker", Width = 70 },
+                new() { PropertyName = "NavPrice", HeaderText = "NAV Price", Width = 60, Format = "F2" },
+                new() { PropertyName = "MarketPrice", HeaderText = "Market Price", Width = 60, Format = "F2" },
+                new() { PropertyName = "HoldInTrust", HeaderText = "Hold In Trust", Width = 60 }
+            };
 
-                // Fund Name
-                gfx.DrawRectangle(pen, brushWhite, marginLeft, yPos, colWidth1, rowHeight);
-                gfx.DrawString(fund.FundName, font, XBrushes.Black,
-                    new XRect(marginLeft + 5, yPos, colWidth1 - 10, rowHeight), XStringFormats.CenterLeft);
+            // Configure export options
+            var options = new PdfExportOptions
+            {
+                ReportTitle = "FUND SUMMARY REPORT",
+                Subtitle = $"Generated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+                ItemsPerPage = 25,
+                FooterText = "This document is confidential and intended for internal use only."
+            };
 
-                // Ticker Code
-                gfx.DrawRectangle(pen, brushWhite, marginLeft + colWidth1, yPos, colWidth2, rowHeight);
-                gfx.DrawString(fund.TickerCode, font, XBrushes.Black,
-                    new XRect(marginLeft + colWidth1, yPos, colWidth2, rowHeight), XStringFormats.Center);
-
-                // NAV Price
-                gfx.DrawRectangle(pen, brushWhite, marginLeft + colWidth1 + colWidth2, yPos, colWidth3, rowHeight);
-                gfx.DrawString(fund.NavPrice.ToString(), font, XBrushes.Black,
-                    new XRect(marginLeft + colWidth1 + colWidth2, yPos, colWidth3, rowHeight), XStringFormats.Center);
-
-                // Market Price
-                gfx.DrawRectangle(pen, brushWhite, marginLeft + colWidth1 + colWidth2 + colWidth3, yPos, colWidth4, rowHeight);
-                gfx.DrawString(fund.MarketPrice.ToString(), font, XBrushes.Black,
-                    new XRect(marginLeft + colWidth1 + colWidth2 + colWidth3, yPos, colWidth4, rowHeight), XStringFormats.Center);
-
-                // Hold In Trust
-                gfx.DrawRectangle(pen, brushWhite, marginLeft + colWidth1 + colWidth2 + colWidth3 + colWidth4, yPos, colWidth5, rowHeight);
-                gfx.DrawString(fund.HoldInTrust ?? "", font, XBrushes.Black,
-                    new XRect(marginLeft + colWidth1 + colWidth2 + colWidth3 + colWidth4, yPos, colWidth5, rowHeight), XStringFormats.Center);
-
-                yPos += rowHeight;
-            }
-
-            // Footer Section
-            yPos = page.Height - 70;
-            gfx.DrawString("END OF REPORT", fontBold, XBrushes.Black,
-                new XRect(0, yPos, page.Width, 20), XStringFormats.TopCenter);
-            gfx.DrawString($"Total Funds: {funds.Count}", font, XBrushes.Black,
-                new XRect(0, yPos + 20, page.Width, 15), XStringFormats.TopCenter);
-            gfx.DrawString("This document is confidential and intended for internal use only.", fontFooter, XBrushes.Black,
-                new XRect(0, yPos + 35, page.Width, 15), XStringFormats.TopCenter);
-
-            // Save PDF to memory stream
-            using var stream = new MemoryStream();
-            document.Save(stream, false);
-            var pdfBytes = stream.ToArray();
+            var pdfBytes = _pdfExportService.ExportToPdf(funds, columns, options);
 
             return File(
                 pdfBytes,
@@ -482,11 +394,6 @@ public class FundsController : UmbracoController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error exporting funds to PDF: {Message}", ex.Message);
-            _logger.LogError(ex, "Stack trace: {StackTrace}", ex.StackTrace);
-            if (ex.InnerException != null)
-            {
-                _logger.LogError(ex, "Inner exception: {InnerMessage}", ex.InnerException.Message);
-            }
             return StatusCode(500, $"An error occurred: {ex.Message}");
         }
     }

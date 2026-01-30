@@ -24,7 +24,7 @@ public class AppDbContext : DbContext
             new Fund { Id = 4, FundName = "Emerging Markets Fund", TickerCode = "EMF101", NavPrice = 55.30m, MarketPrice = 55.80m, HoldInTrust = "No" }
         );
 
-        // Additional fake fund data (20 more funds)
+        // Additional fake fund data (20 more funds from earlier)
         modelBuilder.Entity<Fund>().HasData(
             new Fund { Id = 5, FundName = "Global Equity Fund", TickerCode = "GEF202", NavPrice = 62.45m, MarketPrice = 62.80m, HoldInTrust = "Yes" },
             new Fund { Id = 6, FundName = "Small Cap Opportunities", TickerCode = "SCO301", NavPrice = 38.90m, MarketPrice = 39.15m, HoldInTrust = "No" },
@@ -47,5 +47,45 @@ public class AppDbContext : DbContext
             new Fund { Id = 23, FundName = "Financial Sector Fund", TickerCode = "FSF121", NavPrice = 38.55m, MarketPrice = 38.80m, HoldInTrust = "Yes" },
             new Fund { Id = 24, FundName = "Multi-Asset Income", TickerCode = "MAI222", NavPrice = 33.70m, MarketPrice = 33.95m, HoldInTrust = "No" }
         );
+
+        // 200 additional fake funds (IDs 25-224)
+        var additionalFunds = new List<Fund>();
+        var random = new Random(42); // Fixed seed for reproducibility
+
+        for (int id = 25; id <= 224; id++)
+        {
+            var fundTypes = new[]
+            {
+                "Growth", "Value", "Index", "Active", "Passive", "Blend", "Sector", "Target Date",
+                "Momentum", "Quality", "Dividend", "SmallCap", "MidCap", "LargeCap", "International",
+                "Emerging", "Developed", "Frontier", "Core", "Plus", "Advantage", "Select", "Dynamic"
+            };
+
+            var sectors = new[]
+            {
+                "Technology", "Healthcare", "Financials", "Consumer", "Industrials", "Energy",
+                "Utilities", "Real Estate", "Materials", "Communication", "Utilities"
+            };
+
+            var fundType = fundTypes[random.Next(fundTypes.Length)];
+            var sector = sectors[random.Next(sectors.Length)];
+            var suffix = new string[] { "Growth", "Value", "Plus", "Core", "Select", "Dynamic", "Active" }[random.Next(7)];
+            var number = random.Next(100, 999);
+            var nav = (decimal)(random.Next(10, 150) + random.NextDouble());
+            var market = nav * (1 + (decimal)(random.NextDouble() * 0.1 - 0.05));
+            var hold = random.Next(100) < 40 ? "Yes" : "No";
+
+            additionalFunds.Add(new Fund
+            {
+                Id = id,
+                FundName = $"{sector} {fundType} {suffix} Fund {number}",
+                TickerCode = $"{sector.Substring(0, 3).ToUpper()}{fundType.Substring(0, 3).ToUpper()}{id:D3}",
+                NavPrice = (decimal)Math.Round(nav, 2),
+                MarketPrice = (decimal)Math.Round(market, 2),
+                HoldInTrust = hold
+            });
+        }
+
+        modelBuilder.Entity<Fund>().HasData(additionalFunds);
     }
 }
