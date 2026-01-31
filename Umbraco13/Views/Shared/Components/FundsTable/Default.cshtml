@@ -101,6 +101,9 @@
     {
         <p>No funds data available.</p>
     }
+
+    @* Historical NAV Table - Show for first fund by default *@
+    @await Component.InvokeAsync("HistoricalNavTable", new { fundId = 1 })
 </div>
 
 <style>
@@ -164,6 +167,15 @@ function updateDownloadLinks(tokens) {
     document.getElementById('download-excel-free').href = '/funds/exporttoexcel-free?token=' + tokens.excel;
     document.getElementById('download-excel-epplus').href = '/funds/exporttoexcel?token=' + tokens.excelEpPlus;
     document.getElementById('download-excel-generic').href = '/funds/exporttoexcel-generic?token=' + tokens.excelGeneric;
+
+    // Update historical NAV download links if they exist
+    const histPdfLink = document.getElementById('download-hist-pdf');
+    const histExcelLink = document.getElementById('download-hist-excel');
+    if (histPdfLink && histExcelLink) {
+        histPdfLink.href = '/funds/historical-nav-pdf/1?token=' + tokens.pdf;
+        histExcelLink.href = '/funds/historical-nav-excel/1?token=' + tokens.excelGeneric;
+    }
+
     console.log('Download links updated with new tokens, version:', tokens.version);
 }
 

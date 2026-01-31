@@ -19,8 +19,9 @@ public class FundsController : UmbracoController
     private readonly IConfiguration _configuration;
     private readonly IPdfExportService _pdfExportService;
     private readonly IExcelExportService _excelExportService;
+    private readonly IFundHistoricalNavService _fundHistoricalNavService;
 
-    public FundsController(IFundService fundService, ILogger<FundsController> logger, IDownloadTokenService downloadTokenService, IConfiguration configuration, IPdfExportService pdfExportService, IExcelExportService excelExportService)
+    public FundsController(IFundService fundService, ILogger<FundsController> logger, IDownloadTokenService downloadTokenService, IConfiguration configuration, IPdfExportService pdfExportService, IExcelExportService excelExportService, IFundHistoricalNavService fundHistoricalNavService)
     {
         _fundService = fundService;
         _logger = logger;
@@ -28,6 +29,7 @@ public class FundsController : UmbracoController
         _configuration = configuration;
         _pdfExportService = pdfExportService;
         _excelExportService = excelExportService;
+        _fundHistoricalNavService = fundHistoricalNavService;
     }
 
     [HttpGet("update-table")]
@@ -473,5 +475,94 @@ public class FundsController : UmbracoController
         }
 
         return value;
+    }
+
+    [HttpGet("historical-nav-pdf/{fundId}")]
+    [ValidateDownloadToken("pdf")]
+    public async Task<IActionResult> ExportHistoricalNavToPdf(int fundId)
+    {
+        try
+        {
+            var viewModel = await _fundHistoricalNavService.GetHistoricalNavViewModelAsync(fundId);
+            var historicalNavs = await _fundHistoricalNavService.GetHistoricalNavsByFundIdAsync(fundId);
+
+            // Define columns for PDF export
+            var columns = new List<PdfColumnDefinition>
+            {
+                new() { PropertyName = "NavDate", HeaderText = "Date", Width = 80, Format = "d" },
+                new() { PropertyName = "NavPrice", HeaderText = "NAV Price", Width = 70, Format = "F2" },
+                new() { PropertyName = "MarketPrice", HeaderText = "Market Price", Width = 70, Format = "F2" },
+                new() { PropertyName = "DailyChangePercent", HeaderText = "Daily Change %", Width = 70, Format = "F2" },
+                new() { PropertyName = "NetAssetValue", HeaderText = "Net Asset Value (M)", Width = 80, Format = "F2" }
+            };
+
+            var options = new PdfExportOptions
+            {
+                ReportTitle = $"HISTORICAL NAV VALUES\n{viewModel.FundName} ({viewModel.TickerCode})",
+                ItemsPerPage = 50,
+                Disclaimer = "This report contains historical NAV prices and is for informational purposes only.",
+                FooterText = $"Fund: {viewModel.FundName} | Ticker: {viewModel.TickerCode}",
+                ShowAverageRow = false
+            };
+
+            var pdfBytes = _pdfExportService.ExportToPdf(historicalNavs, columns, options);
+
+            return File(
+                pdfBytes,
+                "application/pdf",
+                $"HistoricalNav_{viewModel.TickerCode}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting historical NAV to PDF: {Message}", ex.Message);
+            return StatusCode(500, $"An error occurred: {ex.Message}");
+        }
+    }
+
+    [HttpGet("historical-nav-excel/{fundId}")]
+    [ValidateDownloadToken("excel-generic")]
+    public async Task<IActionResult> ExportHistoricalNavToExcel(int fundId)
+    {
+        try
+        {
+            var viewModel = await _fundHistoricalNavService.GetHistoricalNavViewModelAsync(fundId);
+            var historicalNavs = await _fundHistoricalNavService.GetHistoricalNavsByFundIdAsync(fundId);
+
+            // Define columns for Excel export
+            var columns = new List<ExcelColumnDefinition>
+            {
+                new() { PropertyName = "NavDate", HeaderText = "Date", Width = 15, Alignment = ExcelAlignment.Left },
+                new() { PropertyName = "NavPrice", HeaderText = "NAV Price", Width = 12, Format = "F2", Alignment = ExcelAlignment.Left },
+                new() { PropertyName = "MarketPrice", HeaderText = "Market Price", Width = 12, Format = "F2", Alignment = ExcelAlignment.Left },
+                new() { PropertyName = "DailyChangePercent", HeaderText = "Daily Change %", Width = 12, Format = "F2", Alignment = ExcelAlignment.Left },
+                new() { PropertyName = "NetAssetValue", HeaderText = "Net Asset Value (M)", Width = 15, Format = "F2", Alignment = ExcelAlignment.Left }
+            };
+
+            var options = new ExcelExportOptions
+            {
+                WorksheetName = "Historical NAV",
+                ReportTitle = $"**HISTORICAL NAV VALUES**\n{viewModel.FundName} ({viewModel.TickerCode})",
+                Disclaimer = "**Disclaimer:** This report contains historical NAV prices and is for informational purposes only.\nPast performance is not indicative of future results.",
+                TitleFont = new ExcelFontStyle { FontSize = 14, Bold = true },
+                HeaderFont = new ExcelFontStyle { Bold = true, BackgroundColor = "#D3D3D3" },
+                DataFont = new ExcelFontStyle { FontSize = 10 },
+                AutoFitColumns = true,
+                ShowBorders = true
+            };
+
+            var excelBytes = _excelExportService.ExportToExcel(historicalNavs, columns, options);
+
+            return File(
+                excelBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"HistoricalNav_{viewModel.TickerCode}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting historical NAV to Excel: {Message}", ex.Message);
+            return StatusCode(500, $"An error occurred: {ex.Message}");
+        }
     }
 }

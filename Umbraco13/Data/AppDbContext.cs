@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<Fund> Funds { get; set; }
+    public DbSet<FundHistoricalNav> FundHistoricalNavs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -87,5 +88,51 @@ public class AppDbContext : DbContext
         }
 
         modelBuilder.Entity<Fund>().HasData(additionalFunds);
+
+        // Seed historical NAV data - 50 records spanning 2018-2025
+        var historicalNavs = new List<FundHistoricalNav>();
+        var histRandom = new Random(43); // Different seed for variety
+        var baseDate = new DateTime(2018, 1, 1);
+
+        for (int i = 1; i <= 50; i++)
+        {
+            // Distribute dates across 2018-2025
+            int yearOffset = (i - 1) / 6; // Spread across years
+            int monthOffset = ((i - 1) % 12) + 1;
+            int dayOffset = histRandom.Next(1, 28);
+
+            var navDate = new DateTime(2018 + yearOffset, monthOffset, dayOffset);
+
+            // Assign to different funds (first 10 funds)
+            int fundId = ((i - 1) % 10) + 1;
+
+            // Generate NAV price with some variation
+            decimal baseNav = 30 + (fundId * 5); // Different base for each fund
+            decimal yearlyChange = (yearOffset * 2m); // Grow over time
+            decimal randomVariation = (decimal)(histRandom.NextDouble() * 10 - 5);
+            decimal navPrice = Math.Round(baseNav + yearlyChange + randomVariation, 2);
+
+            // Market price close to NAV
+            decimal marketPrice = Math.Round(navPrice * (1 + (decimal)(histRandom.NextDouble() * 0.04 - 0.02)), 2);
+
+            // Daily change percentage
+            decimal dailyChange = Math.Round((decimal)(histRandom.NextDouble() * 6 - 3), 2);
+
+            // Net asset value (in millions)
+            decimal netAssetValue = Math.Round((decimal)(histRandom.NextDouble() * 500 + 100), 2);
+
+            historicalNavs.Add(new FundHistoricalNav
+            {
+                Id = i,
+                FundId = fundId,
+                NavPrice = navPrice,
+                MarketPrice = marketPrice,
+                NavDate = navDate,
+                DailyChangePercent = dailyChange,
+                NetAssetValue = netAssetValue
+            });
+        }
+
+        modelBuilder.Entity<FundHistoricalNav>().HasData(historicalNavs);
     }
 }
