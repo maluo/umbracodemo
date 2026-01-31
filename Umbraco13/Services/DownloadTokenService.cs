@@ -88,7 +88,8 @@ public class DownloadTokenService : IDownloadTokenService
                 { "pdf", new TokenData { Token = GenerateRandomToken(), Expiry = expiryTime, Type = "pdf" } },
                 { "csv", new TokenData { Token = GenerateRandomToken(), Expiry = expiryTime, Type = "csv" } },
                 { "excel-free", new TokenData { Token = GenerateRandomToken(), Expiry = expiryTime, Type = "excel-free" } },
-                { "excel", new TokenData { Token = GenerateRandomToken(), Expiry = expiryTime, Type = "excel" } }
+                { "excel", new TokenData { Token = GenerateRandomToken(), Expiry = expiryTime, Type = "excel" } },
+                { "excel-generic", new TokenData { Token = GenerateRandomToken(), Expiry = expiryTime, Type = "excel-generic" } }
             }
         };
     }

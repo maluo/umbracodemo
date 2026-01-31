@@ -21,6 +21,7 @@ builder.Services.AddDbContext<Umbraco13.Data.AppDbContext>(options =>
 builder.Services.AddScoped<Umbraco13.Services.IFundService, Umbraco13.Services.FundService>();
 builder.Services.AddScoped<Umbraco13.Services.IDownloadTokenService, Umbraco13.Services.DownloadTokenService>();
 builder.Services.AddScoped<Umbraco13.Services.IPdfExportService, Umbraco13.Services.PdfExportService>();
+builder.Services.AddScoped<Umbraco13.Services.IExcelExportService, Umbraco13.Services.ExcelExportService>();
 
 // Add JWT Bearer authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

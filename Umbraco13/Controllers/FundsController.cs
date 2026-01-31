@@ -18,14 +18,16 @@ public class FundsController : UmbracoController
     private readonly IDownloadTokenService _downloadTokenService;
     private readonly IConfiguration _configuration;
     private readonly IPdfExportService _pdfExportService;
+    private readonly IExcelExportService _excelExportService;
 
-    public FundsController(IFundService fundService, ILogger<FundsController> logger, IDownloadTokenService downloadTokenService, IConfiguration configuration, IPdfExportService pdfExportService)
+    public FundsController(IFundService fundService, ILogger<FundsController> logger, IDownloadTokenService downloadTokenService, IConfiguration configuration, IPdfExportService pdfExportService, IExcelExportService excelExportService)
     {
         _fundService = fundService;
         _logger = logger;
         _downloadTokenService = downloadTokenService;
         _configuration = configuration;
         _pdfExportService = pdfExportService;
+        _excelExportService = excelExportService;
     }
 
     [HttpGet("update-table")]
@@ -45,7 +47,8 @@ public class FundsController : UmbracoController
             pdf = _downloadTokenService.GenerateDownloadToken("pdf"),
             csv = _downloadTokenService.GenerateDownloadToken("csv"),
             excel = _downloadTokenService.GenerateDownloadToken("excel-free"),
-            excelEpPlus = _downloadTokenService.GenerateDownloadToken("excel")
+            excelEpPlus = _downloadTokenService.GenerateDownloadToken("excel"),
+            excelGeneric = _downloadTokenService.GenerateDownloadToken("excel-generic")
         });
     }
 
@@ -369,18 +372,20 @@ public class FundsController : UmbracoController
             {
                 new() { PropertyName = "FundName", HeaderText = "Fund Name", Alignment = XStringAlignment.Near },
                 new() { PropertyName = "TickerCode", HeaderText = "Ticker", Width = 70 },
-                new() { PropertyName = "NavPrice", HeaderText = "NAV Price", Width = 60, Format = "F2" },
-                new() { PropertyName = "MarketPrice", HeaderText = "Market Price", Width = 60, Format = "F2" },
+                new() { PropertyName = "NavPrice", HeaderText = "NAV Price", Width = 60, Format = "F2", ShowAverage = true },
+                new() { PropertyName = "MarketPrice", HeaderText = "Market Price", Width = 60, Format = "F2", ShowAverage = true },
                 new() { PropertyName = "HoldInTrust", HeaderText = "Hold In Trust", Width = 60 }
             };
 
             // Configure export options
             var options = new PdfExportOptions
             {
-                ReportTitle = "FUND SUMMARY REPORT",
-                Subtitle = $"Generated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-                ItemsPerPage = 25,
-                FooterText = "This document is confidential and intended for internal use only."
+                ReportTitle = "FUND SUMMARY REPORT\nThis report provides a summary of all funds including their NAV and market prices.\nwhat is more, it is generated using a custom PDF export service.\n financial report",
+                //Subtitle = $"Generated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+                ItemsPerPage = 50,
+                Disclaimer = "FUND SUMMARY REPORT\nThis report provides a summary of all funds including their NAV and market prices.\nwhat is more, it is generated using a custom PDF export service.\n financial report",
+                FooterText = "This document is confidential and intended for internal use only.",
+                ShowAverageRow = true
             };
 
             var pdfBytes = _pdfExportService.ExportToPdf(funds, columns, options);
@@ -394,6 +399,64 @@ public class FundsController : UmbracoController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error exporting funds to PDF: {Message}", ex.Message);
+            return StatusCode(500, $"An error occurred: {ex.Message}");
+        }
+    }
+
+    [HttpGet("exporttoexcel-generic")]
+    [ValidateDownloadToken("excel-generic")]
+    public async Task<IActionResult> ExportToExcelGeneric()
+    {
+        try
+        {
+            var funds = await _fundService.GetAllFundsAsync();
+
+            // Define columns for generic Excel export
+            var columns = new List<ExcelColumnDefinition>
+            {
+                new() { PropertyName = "FundName", HeaderText = "Fund Name", Alignment = ExcelAlignment.Left },
+                new() { PropertyName = "TickerCode", HeaderText = "Ticker", Width = 15, Alignment = ExcelAlignment.Left },
+                new() { PropertyName = "NavPrice", HeaderText = "NAV Price", Width = 12, Format = "F2", Alignment = ExcelAlignment.Right },
+                new() { PropertyName = "MarketPrice", HeaderText = "Market Price", Width = 12, Format = "F2", Alignment = ExcelAlignment.Right },
+                new() { PropertyName = "HoldInTrust", HeaderText = "Hold In Trust", Width = 15, Alignment = ExcelAlignment.Left }
+            };
+
+            // Configure export options with full styling control
+            var options = new ExcelExportOptions
+            {
+                WorksheetName = "Funds",
+                ReportTitle = "**FUND SUMMARY REPORT**\nThis report provides a summary of all funds\nincluding their **NAV** and **Market Prices**.",
+                //Subtitle = "Generated by **Investment Team**\nConfidential Document",
+                //FooterText = "**CONFIDENTIAL:** This document contains proprietary information.\nUnauthorized distribution is **strictly prohibited**.",
+                Disclaimer = "**IMPORTANT DISCLAIMER:**\nPast performance is **not indicative** of future results.\nPlease consult with a **qualified financial advisor**.",
+                // Styling - Title
+                TitleFont = new ExcelFontStyle { FontSize = 16, Bold = true, FontColor = "#000000" },
+                // Styling - Subtitle
+                SubtitleFont = new ExcelFontStyle { FontSize = 11, Italic = true, FontColor = "#333333" },
+                // Styling - Header
+                HeaderFont = new ExcelFontStyle { Bold = true, BackgroundColor = "#D3D3D3", FontColor = "#000000" },
+                // Styling - Data
+                DataFont = new ExcelFontStyle { FontSize = 10, FontColor = "#000000" },
+                // Styling - Footer
+                FooterFont = new ExcelFontStyle { FontSize = 9, Italic = true, FontColor = "#666666" },
+                // Styling - Disclaimer
+                DisclaimerFont = new ExcelFontStyle { FontSize = 8, FontColor = "#999999" },
+                // Other options
+                AutoFitColumns = true,
+                ShowBorders = true
+            };
+
+            var excelBytes = _excelExportService.ExportToExcel(funds, columns, options);
+
+            return File(
+                excelBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Funds_Export_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting funds to Excel (generic): {Message}", ex.Message);
             return StatusCode(500, $"An error occurred: {ex.Message}");
         }
     }

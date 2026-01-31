@@ -38,6 +38,11 @@ public class PdfColumnDefinition
     /// Alignment for this column (default: Center)
     /// </summary>
     public XStringAlignment Alignment { get; set; } = XStringAlignment.Center;
+
+    /// <summary>
+    /// Calculate and show average for this column in summary row (only for numeric types)
+    /// </summary>
+    public bool ShowAverage { get; set; }
 }
 
 /// <summary>
@@ -136,9 +141,24 @@ public class PdfExportOptions
     public string? FooterText { get; set; }
 
     /// <summary>
+    /// Disclaimer text to display below the footer (optional). Multi-line disclaimers can use \n for line breaks.
+    /// </summary>
+    public string? Disclaimer { get; set; }
+
+    /// <summary>
     /// Optional callback to get the total count (useful when passing a paged list)
     /// </summary>
     public Func<int>? GetTotalCount { get; set; }
+
+    /// <summary>
+    /// Show average row at end of table (default: false)
+    /// </summary>
+    public bool ShowAverageRow { get; set; }
+
+    /// <summary>
+    /// Label for average row (default: "Average")
+    /// </summary>
+    public string AverageRowLabel { get; set; } = "Average";
 }
 
 /// <summary>
@@ -151,6 +171,86 @@ public class PdfExportService : IPdfExportService
     public PdfExportService(ILogger<PdfExportService> logger)
     {
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Draws text with support for **bold** markup. Use **text** for bold portions.
+    /// </summary>
+    private void DrawFormattedText(
+        XGraphics gfx,
+        string text,
+        double xPos,
+        double yPos,
+        double maxWidth,
+        double lineHeight,
+        XFont font,
+        XFont fontBold,
+        XBrush brush,
+        XStringAlignment alignment = XStringAlignment.Center)
+    {
+        // Parse **bold** markers
+        var segments = new List<(string text, bool isBold)>();
+        int currentIndex = 0;
+
+        while (currentIndex < text.Length)
+        {
+            int boldStart = text.IndexOf("**", currentIndex);
+
+            if (boldStart == -1)
+            {
+                // No more bold markers, add remaining text as regular
+                segments.Add((text.Substring(currentIndex), false));
+                break;
+            }
+            else if (boldStart > currentIndex)
+            {
+                // Add regular text before bold marker
+                segments.Add((text.Substring(currentIndex, boldStart - currentIndex), false));
+            }
+
+            // Find closing **
+            int boldEnd = text.IndexOf("**", boldStart + 2);
+            if (boldEnd == -1)
+            {
+                // Unclosed bold marker, treat as regular text
+                segments.Add((text.Substring(currentIndex), false));
+                break;
+            }
+
+            // Add bold text (without the ** markers)
+            segments.Add((text.Substring(boldStart + 2, boldEnd - boldStart - 2), true));
+            currentIndex = boldEnd + 2;
+        }
+
+        // Calculate total width for alignment
+        double totalWidth = 0;
+        foreach (var (segText, isBold) in segments)
+        {
+            var segFont = isBold ? fontBold : font;
+            totalWidth += gfx.MeasureString(segText, segFont).Width;
+        }
+
+        // Calculate starting X position based on alignment
+        double currentX = xPos;
+        if (alignment == XStringAlignment.Center)
+        {
+            currentX = xPos + (maxWidth - totalWidth) / 2;
+        }
+        else if (alignment == XStringAlignment.Far)
+        {
+            currentX = xPos + maxWidth - totalWidth;
+        }
+
+        // Draw each segment
+        foreach (var (segText, isBold) in segments)
+        {
+            if (string.IsNullOrEmpty(segText)) continue;
+
+            var segFont = isBold ? fontBold : font;
+            gfx.DrawString(segText, segFont, brush,
+                new XRect(currentX, yPos, maxWidth, lineHeight), XStringFormats.TopLeft);
+            currentX += gfx.MeasureString(segText, segFont).Width;
+        }
     }
 
     /// <summary>
@@ -184,12 +284,13 @@ public class PdfExportService : IPdfExportService
         var itemsOnCurrentPage = 0;
         var firstItemOnPage = 1;
 
-        // Draw first page header and table header
+        // Draw first page header and table header (with extra spacing after header)
         DrawPageHeader(page, gfx, currentPageNum, options, font, fontHeader);
-        DrawTableHeader(gfx, options.MarginTop, columnWidths, columns, fontBold, options);
+        var firstPageTableTop = options.MarginTop + 30; // Extra 30 units spacing for first page
+        DrawTableHeader(gfx, firstPageTableTop, columnWidths, columns, fontBold, options);
 
         // Data Rows
-        double yPos = options.MarginTop + options.RowHeight;
+        double yPos = firstPageTableTop + options.RowHeight;
 
         for (int i = 0; i < dataList.Count; i++)
         {
@@ -208,10 +309,12 @@ public class PdfExportService : IPdfExportService
                 currentPageNum++;
                 firstItemOnPage = i + 1;
                 itemsOnCurrentPage = 0;
-                yPos = options.MarginTop;
 
-                // Draw header and table header on new page
-                DrawPageHeader(page, gfx, currentPageNum, options, font, fontHeader);
+                // Draw continuation page header (just "Continued" message)
+                DrawContinuationPageHeader(page, gfx, options, font);
+
+                // Table starts closer to top on continuation pages
+                yPos = 50; // Minimal spacing for continuation pages
                 DrawTableHeader(gfx, yPos, columnWidths, columns, fontBold, options);
                 yPos += options.RowHeight;
             }
@@ -220,6 +323,18 @@ public class PdfExportService : IPdfExportService
             DrawDataRow(gfx, item, yPos, columnWidths, columns, font, options);
             yPos += options.RowHeight;
             itemsOnCurrentPage++;
+        }
+
+        // Draw average row (if enabled)
+        if (options.ShowAverageRow)
+        {
+            yPos = DrawAverageRow(gfx, yPos, dataList, columnWidths, columns, font, fontBold, options);
+        }
+
+        // Draw disclaimer immediately after last table row (if provided)
+        if (!string.IsNullOrEmpty(options.Disclaimer))
+        {
+            yPos = DrawDisclaimer(gfx, yPos, page, options, fontFooter, fontBold);
         }
 
         // Draw report footer on last page
@@ -365,28 +480,46 @@ public class PdfExportService : IPdfExportService
     }
 
     /// <summary>
-    /// Draw page header (report title)
+    /// Draw first page header (report title and subtitle)
     /// </summary>
     private void DrawPageHeader(PdfPage page, XGraphics gfx, int pageNum, PdfExportOptions options, XFont font, XFont fontHeader)
     {
-        if (pageNum == 1)
-        {
-            // First page - full title and subtitle
-            gfx.DrawString(options.ReportTitle, fontHeader, XBrushes.Black,
-                new XRect(0, 30, page.Width, 40), XStringFormats.TopCenter);
+        // Only first page gets full header
+        if (pageNum != 1)
+            return;
 
-            if (!string.IsNullOrEmpty(options.Subtitle))
+        // First page - full title and subtitle (left aligned)
+        double yPos = 30;
+
+        // Support multi-line title with **bold** markup
+        var titleLines = options.ReportTitle.Split('\n');
+        foreach (var line in titleLines)
+        {
+            DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 20, font, fontHeader, XBrushes.Black, XStringAlignment.Near);
+            yPos += 20;
+        }
+
+        // Support multi-line subtitle with **bold** markup
+        if (!string.IsNullOrEmpty(options.Subtitle))
+        {
+            yPos += 10; // Add spacing between title and subtitle
+            var subtitleLines = options.Subtitle.Split('\n');
+            foreach (var line in subtitleLines)
             {
-                gfx.DrawString(options.Subtitle, font, XBrushes.Black,
-                    new XRect(0, 65, page.Width, 20), XStringFormats.TopCenter);
+                DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 15, font, fontHeader, XBrushes.Black, XStringAlignment.Near);
+                yPos += 15;
             }
         }
-        else
-        {
-            // Continuation pages - smaller title
-            gfx.DrawString($"{options.ReportTitle} (Continued)", new XFont(options.FontFamily, 14, XFontStyleEx.Bold), XBrushes.Black,
-                new XRect(0, 30, page.Width, 30), XStringFormats.TopCenter);
-        }
+    }
+
+    /// <summary>
+    /// Draw continuation page header (just "(Continued)" message centered)
+    /// </summary>
+    private void DrawContinuationPageHeader(PdfPage page, XGraphics gfx, PdfExportOptions options, XFont font)
+    {
+        // Simple centered "(Continued)" message
+        gfx.DrawString("(Continued)", new XFont(options.FontFamily, 12, XFontStyleEx.Bold), XBrushes.DarkGray,
+            new XRect(0, 20, page.Width, 20), XStringFormats.TopCenter);
     }
 
     /// <summary>
@@ -463,6 +596,122 @@ public class PdfExportService : IPdfExportService
     }
 
     /// <summary>
+    /// Draw average row with grey background
+    /// </summary>
+    private double DrawAverageRow<T>(
+        XGraphics gfx,
+        double yPos,
+        List<T> dataList,
+        List<double> columnWidths,
+        IList<PdfColumnDefinition> columns,
+        XFont font,
+        XFont fontBold,
+        PdfExportOptions options)
+    {
+        var pen = new XPen(XColors.Gray, 0.5);
+        var brushGray = new XSolidBrush(XColor.FromArgb(240, 240, 240));
+
+        double xPos = options.MarginLeft;
+
+        for (int i = 0; i < columns.Count; i++)
+        {
+            var width = columnWidths[i];
+            var column = columns[i];
+
+            // Draw grey background for the cell
+            gfx.DrawRectangle(pen, brushGray, xPos, yPos, width, options.RowHeight);
+
+            if (i == 0)
+            {
+                // First column - show "Average" label
+                gfx.DrawString(options.AverageRowLabel, fontBold, XBrushes.Black,
+                    new XRect(xPos + 5, yPos, width - 5, options.RowHeight), XStringFormats.CenterLeft);
+            }
+            else if (column.ShowAverage)
+            {
+                // Calculate average for numeric columns
+                double sum = 0;
+                int count = 0;
+
+                foreach (var item in dataList)
+                {
+                    var value = GetPropertyValue(item, column.PropertyName);
+                    if (value != null && IsNumeric(value))
+                    {
+                        sum += Convert.ToDouble(value);
+                        count++;
+                    }
+                }
+
+                string avgText = "";
+                if (count > 0)
+                {
+                    var avg = sum / count;
+
+                    // Use format if provided, otherwise show 2 decimal places
+                    if (!string.IsNullOrEmpty(column.Format))
+                    {
+                        avgText = string.Format("{0:" + column.Format + "}", avg);
+                    }
+                    else if (column.CustomFormatter != null)
+                    {
+                        avgText = column.CustomFormatter(avg);
+                    }
+                    else
+                    {
+                        avgText = avg.ToString("F2");
+                    }
+                }
+
+                // Draw average value (centered)
+                gfx.DrawString(avgText, fontBold, XBrushes.Black,
+                    new XRect(xPos, yPos, width, options.RowHeight), XStringFormats.Center);
+            }
+
+            xPos += width;
+        }
+
+        return yPos + options.RowHeight;
+    }
+
+    /// <summary>
+    /// Check if a value is numeric
+    /// </summary>
+    private bool IsNumeric(object value)
+    {
+        return value is int or double or decimal or float or long or short or byte or uint or ulong or ushort or sbyte;
+    }
+
+    /// <summary>
+    /// Draw disclaimer immediately after table rows (before footer)
+    /// </summary>
+    private double DrawDisclaimer(
+        XGraphics gfx,
+        double yPos,
+        PdfPage page,
+        PdfExportOptions options,
+        XFont fontFooter,
+        XFont fontBold)
+    {
+        // Add spacing after last table row
+        yPos += 15;
+
+        // Draw disclaimer separator line (full width like table)
+        gfx.DrawLine(new XPen(XColors.Gray, 0.5), options.MarginLeft, yPos, page.Width - options.MarginLeft, yPos);
+        yPos += 10;
+
+        // Draw disclaimer text (support multi-line with \n and **bold** markup), left aligned
+        var disclaimerLines = options.Disclaimer!.Split('\n');
+        foreach (var line in disclaimerLines)
+        {
+            DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 12, fontFooter, fontBold, XBrushes.DarkGray, XStringAlignment.Near);
+            yPos += 12;
+        }
+
+        return yPos;
+    }
+
+    /// <summary>
     /// Draw page footer (page number, progress indicator)
     /// </summary>
     private void DrawPageFooter(
@@ -486,7 +735,7 @@ public class PdfExportService : IPdfExportService
 
         if (options.ShowProgressIndicator)
         {
-            gfx.DrawString($"Showing {startItem}-{endItem} of {totalCount} items", fontPageNum, XBrushes.DarkGray,
+            gfx.DrawString($"Showing {startItem}-{endItem} of {totalCount} records", fontPageNum, XBrushes.DarkGray,
                 new XRect(0, footerY, totalPageWidth, 15), XStringFormats.TopCenter);
         }
 
@@ -525,13 +774,19 @@ public class PdfExportService : IPdfExportService
         gfx.DrawString($"Total Items: {totalCount}", font, XBrushes.Black,
             new XRect(0, footerY + 20, page.Width, 15), XStringFormats.TopCenter);
 
+        // Footer text (support multi-line with \n and **bold** markup)
+        footerY += 40;
         var footerText = options.FooterText ?? "This document is confidential and intended for internal use only.";
-        gfx.DrawString(footerText, fontFooter, XBrushes.Black,
-            new XRect(0, footerY + 35, page.Width, 15), XStringFormats.TopCenter);
+        var footerLines = footerText.Split('\n');
+        foreach (var line in footerLines)
+        {
+            DrawFormattedText(gfx, line.Trim(), 0, footerY, page.Width, 12, fontFooter, fontBold, XBrushes.Black);
+            footerY += 12;
+        }
 
         // Page info below the report footer
-        footerY += 60;
-        var pageInfo = $"Page {pageNum} | Showing {startItem}-{totalCount} of {totalCount} items | {DateTime.Now:yyyy-MM-dd}";
+        footerY = page.Height - options.MarginBottom;
+        var pageInfo = $"Page {pageNum} | Showing {startItem}-{totalCount} of {totalCount} records | {DateTime.Now:yyyy-MM-dd}";
         gfx.DrawString(pageInfo, fontPageNum, XBrushes.DarkGray,
             new XRect(0, footerY, page.Width, 15), XStringFormats.TopCenter);
     }
