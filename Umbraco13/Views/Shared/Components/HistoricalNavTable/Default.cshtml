@@ -38,7 +38,7 @@
             <div class="card-body">
                 <h5 class="card-title text-center mb-4">NAV Price vs Market Price Chart</h5>
                 <div id="nav-chart-container" style="width: 100%; overflow-x: auto; position: relative;">
-                    <svg id="nav-chart" width="100%" height="350" preserveAspectRatio="xMidYMid meet" style="background-color: #f8f9fa; border-radius: 8px; min-width: 600px;">
+                    <svg id="nav-chart" width="100%" height="350" preserveAspectRatio="none" style="background-color: #f8f9fa; border-radius: 8px; min-width: 600px; display: block;">
                         <!-- Chart will be rendered here by JavaScript -->
                     </svg>
                     <div id="chart-tooltip"></div>
@@ -155,6 +155,256 @@
 </style>
 
 <script>
+/**
+ * Generic Column-Aligned Bar Chart Generator
+ * Creates SVG bar charts that align with table columns
+ *
+ * @@param {Object} options - Chart configuration options
+ * @@param {string} options.containerId - ID of the container element
+ * @@param {Array} options.data - Array of data objects (one per column)
+ * @@param {Array} options.series - Array of series definitions [{key, label, color, format}]
+ * @@param {number} options.labelColumnWidth - Width of the label column in pixels
+ * @@param {number} options.height - Chart height in pixels
+ * @@param {string} options.title - Chart title
+ * @@param {Object} options.yAxis - Y axis configuration {title, labelFormatter}
+ * @@param {boolean} options.showGuides - Show vertical alignment guides
+ * @@param {boolean} options.showBoundaries - Show column boundary markers
+ *
+ * @@example
+ * generateColumnBarChart({
+ *     containerId: 'nav-chart',
+ *     data: [{NavPrice: 50, MarketPrice: 49.5, NavDate: '2025-01-01'}, ...],
+ *     series: [
+ *         {key: 'NavPrice', label: 'NAV Price', color: '#3b82f6', format: 'currency'},
+ *         {key: 'MarketPrice', label: 'Market Price', color: '#22c55e', format: 'currency'}
+ *     ],
+ *     labelColumnWidth: 150,
+ *     height: 350,
+ *     title: 'NAV Price vs Market Price'
+ * });
+ */
+function generateColumnBarChart(options) {
+    const {
+        containerId,
+        data = [],
+        series = [],
+        labelColumnWidth = 150,
+        height = 350,
+        title = '',
+        yAxis = { title: 'Price', labelFormatter: (v) => '$' + v.toFixed(2) },
+        showGuides = true,
+        showBoundaries = true
+    } = options;
+
+    const container = document.getElementById(containerId);
+    if (!container || !data.length || !series.length) {
+        if (container) {
+            container.innerHTML = `<svg width="100%" height="${height}" style="background-color: #f8f9fa; border-radius: 8px;">
+                <text x="50%" y="50%" text-anchor="middle" fill="#6c757d">No data available</text>
+            </svg>`;
+        }
+        return;
+    }
+
+    // Get container width for full expansion
+    const containerWidth = container.clientWidth || 1200;
+
+    // Calculate dimensions
+    const totalWidth = containerWidth;
+    const availableWidth = totalWidth - labelColumnWidth - 20;
+    const columnWidth = availableWidth / data.length;
+
+    // Chart padding
+    const chartLeft = labelColumnWidth;
+    const padding = { top: 40, right: 20, bottom: 70, left: chartLeft };
+    const chartWidth = totalWidth - chartLeft - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+
+    // Find min and max values for Y axis scale
+    const allValues = [];
+    data.forEach(item => {
+        series.forEach(s => {
+            const value = item[s.key];
+            if (value !== null && value !== undefined) {
+                allValues.push(value);
+            }
+        });
+    });
+
+    if (allValues.length === 0) {
+        container.innerHTML = `<svg width="100%" height="${height}" style="background-color: #f8f9fa; border-radius: 8px;">
+            <text x="50%" y="50%" text-anchor="middle" fill="#6c757d">No valid data available</text>
+        </svg>`;
+        return;
+    }
+
+    const minValue = Math.min(...allValues) * 0.95;
+    const maxValue = Math.max(...allValues) * 1.05;
+    const valueRange = maxValue - minValue;
+
+    // Calculate bar dimensions based on column width
+    const barWidth = Math.min(50, columnWidth * 0.35);
+    const barGap = Math.min(12, columnWidth * 0.08);
+
+    // Create SVG namespace
+    const ns = 'http://www.w3.org/2000/svg';
+
+    // Helper functions
+    const valueToY = (value) => {
+        return padding.top + chartHeight - ((value - minValue) / valueRange) * chartHeight;
+    };
+
+    const indexToColumnCenter = (index) => {
+        return chartLeft + (index * columnWidth) + (columnWidth / 2);
+    };
+
+    const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-GB');
+    };
+
+    const formatValue = (value, format) => {
+        switch (format) {
+            case 'currency':
+                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+            case 'percent':
+                return value.toFixed(2) + '%';
+            case 'number':
+                return value.toFixed(2);
+            default:
+                return value;
+        }
+    };
+
+    // Build SVG content
+    let svgContent = '';
+
+    // Y axis grid lines
+    const gridLineCount = 5;
+    for (let i = 0; i <= gridLineCount; i++) {
+        const value = minValue + (valueRange * i / gridLineCount);
+        const y = valueToY(value);
+        const label = yAxis.labelFormatter(value);
+
+        svgContent += `<line x1="${chartLeft}" y1="${y}" x2="${totalWidth - padding.right}" y2="${y}" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4"/>`;
+        svgContent += `<text x="${chartLeft - 10}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6c757d">${label}</text>`;
+    }
+
+    // Y axis line
+    svgContent += `<line x1="${chartLeft}" y1="${padding.top}" x2="${chartLeft}" y2="${height - padding.bottom}" stroke="#495057" stroke-width="2"/>`;
+
+    // Vertical divider at label column boundary
+    svgContent += `<line x1="${labelColumnWidth}" y1="${padding.top - 10}" x2="${labelColumnWidth}" y2="${height - padding.bottom}" stroke="#dee2e6" stroke-width="2"/>`;
+
+    // Column center alignment guides
+    if (showGuides) {
+        data.forEach((item, index) => {
+            const groupCenter = indexToColumnCenter(index);
+            svgContent += `<line x1="${groupCenter}" y1="${padding.top}" x2="${groupCenter}" y2="${height - padding.bottom}" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3,3" opacity="0.15"/>`;
+        });
+    }
+
+    // Column boundary markers
+    if (showBoundaries) {
+        data.forEach((item, index) => {
+            const colRightEdge = chartLeft + ((index + 1) * columnWidth);
+            svgContent += `<line x1="${colRightEdge}" y1="${padding.top}" x2="${colRightEdge}" y2="${height - padding.bottom}" stroke="#e9ecef" stroke-width="1" stroke-dasharray="2,2"/>`;
+        });
+    }
+
+    // Draw bars for each column
+    data.forEach((item, colIndex) => {
+        const columnCenter = indexToColumnCenter(colIndex);
+        let barOffset = 0;
+
+        series.forEach((s, seriesIndex) => {
+            const value = item[s.key];
+            if (value === null || value === undefined) return;
+
+            const barY = valueToY(value);
+            const barHeight = padding.top + chartHeight - barY;
+            const barX = columnCenter - (barWidth * series.length / 2) + barOffset;
+            const barColor = s.color || (seriesIndex === 0 ? '#3b82f6' : '#22c55e');
+
+            svgContent += `<rect class="chart-bar" x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}" fill="${barColor}" rx="3" data-value="${value}" data-type="${s.label}" data-series="${seriesIndex}"/>`;
+            barOffset += barWidth + barGap;
+        });
+    });
+
+    // X axis labels (get first date key or use index)
+    const dateKey = data[0].NavDate ? 'NavDate' : (data[0].Date ? 'Date' : null);
+    if (dateKey) {
+        data.forEach((item, index) => {
+            const columnCenter = indexToColumnCenter(index);
+            const dateLabel = formatDate(item[dateKey]);
+            svgContent += `<text x="${columnCenter}" y="${height - padding.bottom + 25}" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">${dateLabel}</text>`;
+        });
+    }
+
+    // X axis line
+    svgContent += `<line x1="${chartLeft}" y1="${height - padding.bottom}" x2="${totalWidth - padding.right}" y2="${height - padding.bottom}" stroke="#495057" stroke-width="2"/>`;
+
+    // Y axis title (rotated)
+    svgContent += `<text x="${-height / 2}" y="15" transform="rotate(-90)" text-anchor="middle" font-size="12" font-weight="bold" fill="#495057">${yAxis.title}</text>`;
+
+    // Create SVG element
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', height);
+    svg.setAttribute('viewBox', `0 0 ${totalWidth} ${height}`);
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.style.backgroundColor = '#f8f9fa';
+    svg.style.borderRadius = '8px';
+    svg.style.display = 'block';
+    svg.innerHTML = svgContent;
+
+    // Clear container and append SVG
+    container.innerHTML = '';
+    container.appendChild(svg);
+
+    // Setup tooltips
+    setupChartTooltips(container);
+
+    // Return SVG element for further manipulation
+    return svg;
+}
+
+/**
+ * Setup tooltip functionality for chart bars
+ */
+function setupChartTooltips(container) {
+    const tooltip = document.createElement('div');
+    tooltip.id = 'chart-tooltip-' + Math.random().toString(36).substr(2, 9);
+    tooltip.style.cssText = 'position: absolute; background-color: rgba(0, 0, 0, 0.8); color: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.2s ease; z-index: 1000; white-space: nowrap;';
+    container.appendChild(tooltip);
+
+    const bars = container.querySelectorAll('.chart-bar');
+    bars.forEach(bar => {
+        bar.addEventListener('mouseenter', function(e) {
+            const value = this.getAttribute('data-value');
+            const type = this.getAttribute('data-type');
+            const color = this.getAttribute('fill');
+            tooltip.innerHTML = `<strong style="color: ${color}">${type}</strong><br>${value}`;
+            tooltip.classList.add('show');
+            tooltip.style.opacity = '1';
+        });
+
+        bar.addEventListener('mousemove', function(e) {
+            const rect = container.getBoundingClientRect();
+            tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
+            tooltip.style.top = (e.clientY - rect.top - 40) + 'px';
+        });
+
+        bar.addEventListener('mouseleave', function() {
+            tooltip.style.opacity = '0';
+        });
+    });
+}
+
+// Make functions globally accessible
+window.generateColumnBarChart = generateColumnBarChart;
+window.setupChartTooltips = setupChartTooltips;
+
 (function() {
     // Data and state
     let allHistoricalNavs = @Html.Raw(historicalNavsData);
@@ -213,6 +463,7 @@
     // Render SVG composite bar chart
     function renderChart(paginatedNavs) {
         const svg = document.getElementById('nav-chart');
+        const container = document.getElementById('nav-chart-container');
         if (!svg || paginatedNavs.length === 0) {
             if (svg) {
                 svg.setAttribute('viewBox', '0 0 600 350');
@@ -221,21 +472,25 @@
             return;
         }
 
-        // Table column dimensions (matching table structure exactly)
-        const labelColumnWidth = 150;  // Width of label column in table
-        const dateColumnWidth = 120;   // Width of each date column in table
-
-        // Calculate total width to match table exactly
-        const totalWidth = labelColumnWidth + (paginatedNavs.length * dateColumnWidth);
+        // Get actual container width for full-screen expansion
+        const containerWidth = container.clientWidth || 1200;
         const height = 350;
 
-        // Set viewBox to match table width exactly
+        // Table column dimensions (for reference)
+        const labelColumnWidth = 150;  // Width of label column in table
+
+        // Set viewBox to actual container width for full expansion
+        const totalWidth = containerWidth;
         svg.setAttribute('viewBox', `0 0 ${totalWidth} ${height}`);
 
-        // Chart padding - Y axis fits within the label column space
-        const yAxisWidth = 50;  // Space for Y axis labels
-        const padding = { top: 40, right: 20, bottom: 70, left: yAxisWidth };
-        const chartWidth = totalWidth - padding.left - padding.right;
+        // Calculate dynamic column width based on available space
+        const availableWidth = totalWidth - labelColumnWidth - 20; // Minus label column and right padding
+        const dateColumnWidth = availableWidth / paginatedNavs.length;  // Distribute evenly
+
+        // Chart area dimensions - bars start at labelColumnWidth (150px)
+        const chartLeft = labelColumnWidth;  // Y axis at 150px (label column boundary)
+        const padding = { top: 40, right: 20, bottom: 70, left: chartLeft };
+        const chartWidth = totalWidth - chartLeft - padding.right;
         const chartHeight = height - padding.top - padding.bottom;
 
         // Clear previous content
@@ -250,10 +505,6 @@
         const maxValue = Math.max(...allValues) * 1.05;
         const valueRange = maxValue - minValue;
 
-        // Calculate bar dimensions - match table column width exactly
-        const barWidth = 40;  // Fixed width for each bar
-        const barGap = 8;     // Gap between bars in same group
-
         // Create SVG namespace
         const ns = 'http://www.w3.org/2000/svg';
 
@@ -263,9 +514,23 @@
         };
 
         // Function to convert index to X coordinate for bar group (align with table columns)
-        // Bar groups start at labelColumnWidth (150px) and each column is dateColumnWidth (120px)
+        // Bar groups are centered within each 120px date column
         const indexToGroupX = (index) => {
-            return labelColumnWidth + (index * dateColumnWidth) + (dateColumnWidth / 2);
+            return chartLeft + (index * dateColumnWidth) + (dateColumnWidth / 2);
+        };
+
+        // Calculate bar dimensions based on dynamic column width
+        const barWidth = Math.min(50, dateColumnWidth * 0.35);  // Bar width scales with column (max 50px)
+        const barGap = Math.min(12, dateColumnWidth * 0.08);     // Gap scales with column (max 12px)
+
+        // Calculate bar positions within each column - centered in column
+        const navBarX = (columnIndex) => {
+            const columnCenter = chartLeft + (columnIndex * dateColumnWidth) + (dateColumnWidth / 2);
+            return columnCenter - barWidth - (barGap / 2);
+        };
+        const marketBarX = (columnIndex) => {
+            const columnCenter = chartLeft + (columnIndex * dateColumnWidth) + (dateColumnWidth / 2);
+            return columnCenter + (barGap / 2);
         };
 
         // Draw Y axis grid lines and labels
@@ -274,9 +539,9 @@
             const value = minValue + (valueRange * i / gridLineCount);
             const y = valueToY(value);
 
-            // Grid line - spans from Y axis to right edge
+            // Grid line - spans from Y axis (150px) to right edge
             const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', padding.left);
+            line.setAttribute('x1', chartLeft);
             line.setAttribute('y1', y);
             line.setAttribute('x2', totalWidth - padding.right);
             line.setAttribute('y2', y);
@@ -285,9 +550,9 @@
             line.setAttribute('stroke-dasharray', '4,4');
             svg.appendChild(line);
 
-            // Y axis label
+            // Y axis label - positioned to the left of Y axis (within label column)
             const label = document.createElementNS(ns, 'text');
-            label.setAttribute('x', padding.left - 8);
+            label.setAttribute('x', chartLeft - 10);
             label.setAttribute('y', y + 4);
             label.setAttribute('text-anchor', 'end');
             label.setAttribute('font-size', '11');
@@ -296,7 +561,17 @@
             svg.appendChild(label);
         }
 
-        // Draw vertical divider line between label column and date columns
+        // Draw Y axis line at label column boundary (150px)
+        const yAxis = document.createElementNS(ns, 'line');
+        yAxis.setAttribute('x1', chartLeft);
+        yAxis.setAttribute('y1', padding.top);
+        yAxis.setAttribute('x2', chartLeft);
+        yAxis.setAttribute('y2', height - padding.bottom);
+        yAxis.setAttribute('stroke', '#495057');
+        yAxis.setAttribute('stroke-width', '2');
+        svg.appendChild(yAxis);
+
+        // Draw vertical divider line (same as Y axis - visual marker)
         const dividerLine = document.createElementNS(ns, 'line');
         dividerLine.setAttribute('x1', labelColumnWidth);
         dividerLine.setAttribute('y1', padding.top - 10);
@@ -306,15 +581,48 @@
         dividerLine.setAttribute('stroke-width', '2');
         svg.appendChild(dividerLine);
 
+        // Draw vertical alignment guide lines for each bar group (connects chart to table)
+        paginatedNavs.forEach((nav, index) => {
+            const groupCenter = indexToGroupX(index);
+
+            // Draw subtle vertical dashed line from bar group to bottom
+            const guideLine = document.createElementNS(ns, 'line');
+            guideLine.setAttribute('x1', groupCenter);
+            guideLine.setAttribute('y1', padding.top);
+            guideLine.setAttribute('x2', groupCenter);
+            guideLine.setAttribute('y2', height - padding.bottom);
+            guideLine.setAttribute('stroke', '#3b82f6');
+            guideLine.setAttribute('stroke-width', '1');
+            guideLine.setAttribute('stroke-dasharray', '3,3');
+            guideLine.setAttribute('opacity', '0.15');
+            svg.appendChild(guideLine);
+        });
+
+        // Draw column boundary markers (vertical lines between date columns)
+        paginatedNavs.forEach((nav, index) => {
+            const colRightEdge = chartLeft + ((index + 1) * dateColumnWidth);
+
+            // Draw faint vertical line at column boundary
+            const colBoundary = document.createElementNS(ns, 'line');
+            colBoundary.setAttribute('x1', colRightEdge);
+            colBoundary.setAttribute('y1', padding.top);
+            colBoundary.setAttribute('x2', colRightEdge);
+            colBoundary.setAttribute('y2', height - padding.bottom);
+            colBoundary.setAttribute('stroke', '#e9ecef');
+            colBoundary.setAttribute('stroke-width', '1');
+            colBoundary.setAttribute('stroke-dasharray', '2,2');
+            svg.appendChild(colBoundary);
+        });
+
         // Draw bars and X axis labels
         paginatedNavs.forEach((nav, index) => {
             const groupX = indexToGroupX(index);
 
-            // NAV Price bar (blue) - left bar in group
+            // NAV Price bar (blue) - positioned at left side of column (consistent position)
             const navPriceY = valueToY(nav.NavPrice);
             const navPriceHeight = padding.top + chartHeight - navPriceY;
             const navBar = document.createElementNS(ns, 'rect');
-            navBar.setAttribute('x', groupX - barWidth - (barGap / 2));
+            navBar.setAttribute('x', navBarX(index));
             navBar.setAttribute('y', navPriceY);
             navBar.setAttribute('width', barWidth);
             navBar.setAttribute('height', navPriceHeight);
@@ -325,11 +633,11 @@
             navBar.setAttribute('data-type', 'NAV Price');
             svg.appendChild(navBar);
 
-            // Market Price bar (green) - right bar in group
+            // Market Price bar (green) - positioned at right side of column (consistent position)
             const marketPriceY = valueToY(nav.MarketPrice);
             const marketPriceHeight = padding.top + chartHeight - marketPriceY;
             const marketBar = document.createElementNS(ns, 'rect');
-            marketBar.setAttribute('x', groupX + (barGap / 2));
+            marketBar.setAttribute('x', marketBarX(index));
             marketBar.setAttribute('y', marketPriceY);
             marketBar.setAttribute('width', barWidth);
             marketBar.setAttribute('height', marketPriceHeight);
@@ -340,7 +648,7 @@
             marketBar.setAttribute('data-type', 'Market Price');
             svg.appendChild(marketBar);
 
-            // X axis label (date)
+            // X axis label (date) - centered in column
             const dateLabel = document.createElementNS(ns, 'text');
             dateLabel.setAttribute('x', groupX);
             dateLabel.setAttribute('y', height - padding.bottom + 25);
@@ -352,19 +660,9 @@
             svg.appendChild(dateLabel);
         });
 
-        // Draw Y axis line
-        const yAxis = document.createElementNS(ns, 'line');
-        yAxis.setAttribute('x1', padding.left);
-        yAxis.setAttribute('y1', padding.top);
-        yAxis.setAttribute('x2', padding.left);
-        yAxis.setAttribute('y2', height - padding.bottom);
-        yAxis.setAttribute('stroke', '#495057');
-        yAxis.setAttribute('stroke-width', '2');
-        svg.appendChild(yAxis);
-
         // Draw X axis line
         const xAxis = document.createElementNS(ns, 'line');
-        xAxis.setAttribute('x1', padding.left);
+        xAxis.setAttribute('x1', chartLeft);
         xAxis.setAttribute('y1', height - padding.bottom);
         xAxis.setAttribute('x2', totalWidth - padding.right);
         xAxis.setAttribute('y2', height - padding.bottom);
@@ -372,7 +670,7 @@
         xAxis.setAttribute('stroke-width', '2');
         svg.appendChild(xAxis);
 
-        // Y axis title (rotated)
+        // Y axis title (rotated, positioned in label column)
         const yAxisTitle = document.createElementNS(ns, 'text');
         yAxisTitle.setAttribute('x', -height / 2);
         yAxisTitle.setAttribute('y', 15);
@@ -610,5 +908,14 @@
     // Initial render
     renderTableBody();
     updateSortButton();
+
+    // Handle window resize to adjust chart width
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            renderTableBody(); // Re-render to update chart width
+        }, 250);
+    });
 })();
 </script>

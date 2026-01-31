@@ -731,3 +731,569 @@ Divider:                    | (vertical line at 150px)
 - Color: `#dee2e6` (Bootstrap's border color)
 
 **Build Status:** Succeeded with 0 errors
+
+---
+
+## Recent Updates - Y Axis at Label Column Boundary (2026-01-31)
+
+### Change: Move Y Axis to Match Table Structure Exactly
+
+**Request:** "nav history, align bar chart groups with the match date in table columns"
+
+**Implementation:**
+
+**File Modified:** `Views/Shared/Components/HistoricalNavTable/Default.cshtml`
+
+**Key Change - Y Axis Position:**
+
+**Before:**
+```javascript
+const yAxisWidth = 50;  // Space for Y axis labels
+const padding = { top: 40, right: 20, bottom: 70, left: yAxisWidth };
+// Y axis at x=50px
+```
+
+**After:**
+```javascript
+const chartLeft = labelColumnWidth;  // Y axis at 150px (label column boundary)
+const padding = { top: 40, right: 20, bottom: 70, left: chartLeft };
+// Y axis at x=150px - exactly matches table's label column width
+```
+
+**Perfect Alignment:**
+```
+Table Structure:
+| Label Column (150px) | Date 1 (120px) | Date 2 (120px) | Date 3 (120px) |
+| "NAV Price"          | 01/01/2025     | 02/01/2025     | 03/01/2025     |
+
+Chart Structure (Now Aligned):
+| Y Axis Labels (150px)|   [Bars]       |    [Bars]      |    [Bars]      |
+| $50.00               |  Centered at   |   Centered at   |   Centered at   |
+| $45.00               |  x=210px       |   x=330px       |   x=450px       |
+| $40.00               | (150+60)       |   (150+180)     |   (150+300)     |
+                      ↑                ↑                ↑
+                 Y axis line       Bar Group 1     Bar Group 2
+                 at x=150px       in 120px col    in 120px col
+```
+
+**Bar Group Calculation:**
+```javascript
+const indexToGroupX = (index) => {
+    return chartLeft + (index * dateColumnWidth) + (dateColumnWidth / 2);
+};
+
+// Bar Group 0: 150 + (0 × 120) + 60 = 210px (center of first 120px column)
+// Bar Group 1: 150 + (1 × 120) + 60 = 330px (center of second 120px column)
+// Bar Group 2: 150 + (2 × 120) + 60 = 450px (center of third 120px column)
+```
+
+**Y Axis Labels:**
+- Positioned to the left of Y axis (at x=140px, 10px from axis)
+- All within the 150px label column space
+- Right-aligned (`text-anchor='end'`)
+
+**Grid Lines:**
+- Start at x=150px (Y axis position)
+- Extend to right edge of chart
+- Only appear in date column area (not in label column)
+
+**Visual Result:**
+- Y axis line exactly matches the table's label/date column boundary
+- Bar groups perfectly centered within each date column
+- Date labels align with date column headers
+- Visual harmony between chart and table
+
+**Build Status:** Succeeded with 0 errors
+
+---
+
+## Recent Updates - Visual Alignment Guides for Chart (2026-01-31)
+
+### Change: Add Visual Alignment Guides Connecting Chart to Table
+
+**Request:** "Customize the bar svg - aligning bars with a table below the chart"
+
+**Implementation:**
+
+**File Modified:** `Views/Shared/Components/HistoricalNavTable/Default.cshtml`
+
+**Added Visual Alignment Elements:**
+
+1. **Center Alignment Guide Lines:**
+   ```javascript
+   // Draw vertical alignment guide lines for each bar group
+   paginatedNavs.forEach((nav, index) => {
+       const groupCenter = indexToGroupX(index);
+
+       const guideLine = document.createElementNS(ns, 'line');
+       guideLine.setAttribute('x1', groupCenter);
+       guideLine.setAttribute('y1', padding.top);
+       guideLine.setAttribute('x2', groupCenter);
+       guideLine.setAttribute('y2', height - padding.bottom);
+       guideLine.setAttribute('stroke', '#3b82f6');
+       guideLine.setAttribute('stroke-width', '1');
+       guideLine.setAttribute('stroke-dasharray', '3,3');
+       guideLine.setAttribute('opacity', '0.15');
+   });
+   ```
+   - Blue dashed lines from bar group center to X axis
+   - Very subtle (15% opacity)
+   - Creates visual connection between bars and table columns below
+
+2. **Column Boundary Markers:**
+   ```javascript
+   // Draw column boundary markers (vertical lines between date columns)
+   paginatedNavs.forEach((nav, index) => {
+       const colRightEdge = chartLeft + ((index + 1) * dateColumnWidth);
+
+       const colBoundary = document.createElementNS(ns, 'line');
+       colBoundary.setAttribute('x1', colRightEdge);
+       colBoundary.setAttribute('y1', padding.top);
+       colBoundary.setAttribute('x2', colRightEdge);
+       colBoundary.setAttribute('y2', height - padding.bottom);
+       colBoundary.setAttribute('stroke', '#e9ecef');
+       colBoundary.setAttribute('stroke-width', '1');
+       colBoundary.setAttribute('stroke-dasharray', '2,2');
+   });
+   ```
+   - Faint gray lines at column boundaries
+   - Separates each date column visually
+   - Matches table's vertical structure
+
+**Visual Guide Lines:**
+```
+Table:    | Label | Date 1    | Date 2    | Date 3    |
+          |       | 01/01/25  | 02/01/25  | 03/01/25  |
+
+Chart:    | $50   |     |     |     |     |
+          | $45   |     |     |     |     |
+          | $40   |     |     |     |     |
+          |       ↓     ↓     ↓     ↓
+          |      bar   bar   bar   bar
+          |      grp   grp   grp   grp
+
+Legend:   |  = Center alignment guide (blue, 15% opacity)
+          |  = Column boundary (gray, very faint)
+```
+
+**Color Scheme:**
+- Center guides: `#3b82f6` (blue) at 15% opacity
+- Column boundaries: `#e9ecef` (light gray) at 100% opacity
+- Y axis divider: `#dee2e6` (medium gray) at 100% opacity
+
+**Benefits:**
+1. **Visual Flow:** Eye can follow the center line from bar to table column
+2. **Column Separation:** Clear boundaries between date columns
+3. **Subtle Design:** Guides don't distract from the data
+4. **Table Connection:** Creates visual link between chart and table
+
+**Styling Details:**
+- Center guides: `stroke-dasharray='3,3'` (medium dash)
+- Column boundaries: `stroke-dasharray='2,2'` (small dash)
+- All guides span from top padding to X axis line
+
+**Build Status:** Succeeded with 0 errors
+
+---
+
+## Recent Updates - Fixed Bar Positions Based on Table Columns (2026-01-31)
+
+### Change: Position Each Bar Based on Column Position
+
+**Request:** "each bar position should be based on the column position in table"
+
+**Implementation:**
+
+**File Modified:** `Views/Shared/Components/HistoricalNavTable/Default.cshtml`
+
+**Key Change - Fixed Bar Positions:**
+
+**Before (centered group approach):**
+```javascript
+const barWidth = 40;
+const barGap = 8;
+const indexToGroupX = (index) => {
+    return chartLeft + (index * dateColumnWidth) + (dateColumnWidth / 2);
+};
+// Bars positioned relative to group center
+navBar.setAttribute('x', groupX - barWidth - (barGap / 2));
+marketBar.setAttribute('x', groupX + (barGap / 2));
+```
+
+**After (fixed position approach):**
+```javascript
+const barWidth = 40;
+const navBarX = (columnIndex) => chartLeft + (columnIndex * dateColumnWidth) + 15;
+const marketBarX = (columnIndex) => chartLeft + (columnIndex * dateColumnWidth) + 65;
+// Bars positioned at fixed locations within each column
+navBar.setAttribute('x', navBarX(index));
+marketBar.setAttribute('x', marketBarX(index));
+```
+
+**Position Calculation:**
+- NAV bars always at `chartLeft + (columnIndex * 120) + 15`
+  - Column 0: 150 + 0 + 15 = 165px
+  - Column 1: 150 + 120 + 15 = 285px
+  - Column 2: 150 + 240 + 15 = 405px
+
+- Market bars always at `chartLeft + (columnIndex * 120) + 65`
+  - Column 0: 150 + 0 + 65 = 215px
+  - Column 1: 150 + 120 + 65 = 335px
+  - Column 2: 150 + 240 + 65 = 455px
+
+**Visual Layout:**
+```
+Column Layout (120px each):
+|-------------------|-------------------|-------------------|
+Label           Date 1           Date 2           Date 3
+(150px)          (120px)          (120px)          (120px)
+
+Bar Positioning:
+|  [NAV] [Mkt]   |  [NAV] [Mkt]   |  [NAV] [Mkt]   |
+ ↑150           ↑270           ↑390
+  NAV=165        NAV=285        NAV=405
+  Mkt=215        Mkt=335        Mkt=455
+```
+
+**Benefits:**
+1. **Consistent Position:** Each bar type is at the same relative position within each column
+2. **Vertical Alignment:** NAV bars across all columns are visually aligned
+3. **Clear Separation:** 10px gap between NAV and Market bars (40px width each)
+4. **Column Structure:** Bars clearly belong to their respective date columns
+
+**Column Structure:**
+```
+Each 120px column contains:
+├─ 15px padding
+├─ 40px NAV bar (blue)
+├─ 10px gap
+├─ 40px Market bar (green)
+└─ 15px padding
+Total: 120px
+```
+
+**Build Status:** Succeeded with 0 errors
+
+---
+
+## Recent Updates - Full Screen Width Chart (2026-01-31)
+
+### Change: Align Bar Chart to Full Screen Width
+
+**Request:** "barchart with should algn to the full screen width"
+
+**Implementation:**
+
+**File Modified:** `Views/Shared/Components/HistoricalNavTable/Default.cshtml`
+
+**Key Changes:**
+
+1. **Fixed Wide viewBox:**
+   ```javascript
+   // Full screen width - use fixed wide viewBox that scales
+   const totalWidth = 1200;  // Fixed viewBox width for full screen
+   svg.setAttribute('viewBox', `0 0 ${totalWidth} ${height}`);
+   ```
+
+2. **Dynamic Column Width Calculation:**
+   ```javascript
+   // Calculate dynamic column width based on available space
+   const availableWidth = totalWidth - labelColumnWidth - 20;
+   const dateColumnWidth = availableWidth / paginatedNavs.length;
+   ```
+   - Columns now distribute evenly across full width
+   - No longer fixed at 120px per column
+
+3. **Scaled Bar Dimensions:**
+   ```javascript
+   const barWidth = Math.min(50, dateColumnWidth * 0.35);  // Max 50px, scales with column
+   const barGap = Math.min(12, dateColumnWidth * 0.08);     // Max 12px, scales with column
+   ```
+
+4. **Centered Bar Positioning:**
+   ```javascript
+   const navBarX = (columnIndex) => {
+       const columnCenter = chartLeft + (columnIndex * dateColumnWidth) + (dateColumnWidth / 2);
+       return columnCenter - barWidth - (barGap / 2);
+   };
+   const marketBarX = (columnIndex) => {
+       const columnCenter = chartLeft + (columnIndex * dateColumnWidth) + (dateColumnWidth / 2);
+       return columnCenter + (barGap / 2);
+   };
+   ```
+
+**Column Width Examples:**
+```
+For 1200px total width (label column = 150px):
+
+3 dates:  (1200 - 150 - 20) / 3 = 343px per column
+5 dates:  (1200 - 150 - 20) / 5 = 206px per column
+10 dates: (1200 - 150 - 20) / 10 = 103px per column
+```
+
+**Responsive Bar Sizing:**
+```
+Wider columns (3 dates):
+├─────────────────────────────────├
+│  [NAV bar]  [Market bar]        │  ← 50px bars
+│   50px        50px              │
+
+Narrow columns (10 dates):
+├──────────├
+│ [NAV][Mkt]│  ← 36px bars (35% of 103px)
+│ 36px 36px │
+```
+
+**Benefits:**
+1. **Full Width Utilization:** Chart uses entire screen width
+2. **Responsive Design:** Columns and bars scale based on number of dates
+3. **Better Visibility:** More space for bars when showing fewer dates
+4. **Consistent Spacing:** Even distribution across available width
+
+**SVG Scaling:**
+- `viewBox="0 0 1200 350"` - Fixed viewBox for consistent aspect ratio
+- `width="100%"` - CSS stretches SVG to fill container
+- `preserveAspectRatio="xMidYMid meet"` - Maintains proportions when scaling
+
+**Build Status:** Succeeded with 0 errors
+
+---
+
+## Recent Updates - True Full Screen Expansion (2026-01-31)
+
+### Change: Expand Chart to Full Screen Width Without Centering
+
+**Request:** "expand the bar chart groups to the full screen size, not center that chart"
+
+**Implementation:**
+
+**File Modified:** `Views/Shared/Components/HistoricalNavTable/Default.cshtml`
+
+**Key Changes:**
+
+1. **Changed preserveAspectRatio:**
+   ```html
+   <!-- Before: -->
+   <svg id="nav-chart" width="100%" height="350" preserveAspectRatio="xMidYMid meet" ...>
+
+   <!-- After: -->
+   <svg id="nav-chart" width="100%" height="350" preserveAspectRatio="none" ...>
+   ```
+   - Changed from `xMidYMid meet` (centers content) to `none` (stretches to fill)
+   - Added `display: block` for proper sizing
+
+2. **Dynamic Container Width:**
+   ```javascript
+   // Get actual container width for full-screen expansion
+   const container = document.getElementById('nav-chart-container');
+   const containerWidth = container.clientWidth || 1200;
+
+   // Set viewBox to actual container width for full expansion
+   const totalWidth = containerWidth;
+   svg.setAttribute('viewBox', `0 0 ${totalWidth} ${height}`);
+   ```
+   - Uses actual container width instead of fixed 1200px
+   - Chart expands to fill available space
+
+3. **Window Resize Handler:**
+   ```javascript
+   // Handle window resize to adjust chart width
+   let resizeTimeout;
+   window.addEventListener('resize', function() {
+       clearTimeout(resizeTimeout);
+       resizeTimeout = setTimeout(function() {
+           renderTableBody(); // Re-render to update chart width
+       }, 250);
+   });
+   ```
+   - Debounced resize handler (250ms delay)
+   - Re-renders chart when window is resized
+   - Maintains smooth performance during resize
+
+**Comparison:**
+
+**Before (centered):**
+```
+┌─────────────────────────────────────┐
+│         Container (100%)             │
+│   ┌───────────────────────────┐     │
+│   │    Chart (centered)       │     │
+│   │                           │     │
+│   └───────────────────────────┘     │
+└─────────────────────────────────────┘
+```
+
+**After (expanded):**
+```
+┌─────────────────────────────────────┐
+│         Container (100%)             │
+│   ┌───────────────────────────────┐ │
+│   │    Chart (full width)        │ │
+│   │                               │ │
+│   └───────────────────────────────┘ │
+└─────────────────────────────────────┘
+```
+
+**Benefits:**
+1. **Full Width Utilization:** Chart fills entire container width
+2. **No Centering Margins:** Eliminates empty space on sides
+3. **Responsive:** Adjusts to actual container size
+4. **Auto-resize:** Updates on window resize
+
+**Technical Details:**
+- `preserveAspectRatio="none"` - Allows SVG to stretch without maintaining aspect ratio
+- `clientWidth` - Gets actual pixel width of container
+- Debounced resize - Prevents excessive re-renders during drag-resize
+
+**Build Status:** Succeeded with 0 errors
+
+---
+
+## Recent Updates - Generic Chart Generator Function (2026-01-31)
+
+### Change: Create Reusable JavaScript Function for Column-Aligned Bar Charts
+
+**Request:** "need to wrap a js function that accep list of data, column chart with, generate this chart svg chart that aligns with the columns in table."
+
+**Implementation:**
+
+**File Modified:** `Views/Shared/Components/HistoricalNavTable/Default.cshtml`
+
+**New Function: `generateColumnBarChart(options)`**
+
+**Function Signature:**
+```javascript
+generateColumnBarChart({
+    containerId: 'nav-chart',           // Target container ID
+    data: [...],                          // Array of data objects
+    series: [                            // Series definitions
+        {key: 'NavPrice', label: 'NAV Price', color: '#3b82f6', format: 'currency'},
+        {key: 'MarketPrice', label: 'Market Price', color: '#22c55e', format: 'currency'}
+    ],
+    labelColumnWidth: 150,               // Width of label column
+    height: 350,                         // Chart height
+    title: 'NAV Price vs Market Price',
+    yAxis: {title: 'Price', labelFormatter: (v) => '$' + v.toFixed(2)},
+    showGuides: true,                    // Show alignment guides
+    showBoundaries: true                 // Show column boundaries
+});
+```
+
+**Function Features:**
+
+1. **Flexible Data Input:**
+   - Accepts any array of data objects
+   - Automatically detects date fields (`NavDate`, `Date`)
+   - Handles null/undefined values gracefully
+
+2. **Configurable Series:**
+   - Multiple data series per column
+   - Custom colors, labels, and formats
+   - Supports: `currency`, `percent`, `number` formats
+
+3. **Auto-Aligned with Table Columns:**
+   - Bars positioned based on label column width
+   - Columns distributed evenly across available width
+   - Matches table structure automatically
+
+4. **Responsive Design:**
+   - Uses actual container width
+   - Bars scale with column width
+   - Full width expansion
+
+5. **Built-in Features:**
+   - Y axis with configurable labels
+   - Grid lines
+   - Vertical alignment guides
+   - Column boundary markers
+   - Interactive tooltips
+   - Date formatting (en-GB)
+
+**Usage Example 1: Historical NAV Chart**
+```javascript
+generateColumnBarChart({
+    containerId: 'nav-chart',
+    data: paginatedNavs,
+    series: [
+        {key: 'NavPrice', label: 'NAV Price', color: '#3b82f6', format: 'currency'},
+        {key: 'MarketPrice', label: 'Market Price', color: '#22c55e', format: 'currency'}
+    ],
+    labelColumnWidth: 150,
+    height: 350,
+    yAxis: {
+        title: 'Price (USD)',
+        labelFormatter: (v) => '$' + v.toFixed(2)
+    }
+});
+```
+
+**Usage Example 2: Custom Data**
+```javascript
+generateColumnBarChart({
+    containerId: 'my-chart',
+    data: [
+        {sales: 1000, target: 1200, month: 'Jan'},
+        {sales: 1500, target: 1400, month: 'Feb'},
+        {sales: 1300, target: 1600, month: 'Mar'}
+    ],
+    series: [
+        {key: 'sales', label: 'Actual Sales', color: '#3b82f6', format: 'currency'},
+        {key: 'target', label: 'Target', color: '#22c55e', format: 'currency'}
+    ],
+    labelColumnWidth: 120,
+    height: 300,
+    title: 'Sales vs Target',
+    yAxis: {
+        title: 'Amount ($)',
+        labelFormatter: (v) => '$' + v.toLocaleString()
+    },
+    showGuides: false,
+    showBoundaries: false
+});
+```
+
+**Usage Example 3: Percentage Data**
+```javascript
+generateColumnBarChart({
+    containerId: 'performance-chart',
+    data: [
+        {growth: 15.5, benchmark: 10.0, quarter: 'Q1'},
+        {growth: 22.3, benchmark: 12.0, quarter: 'Q2'}
+    ],
+    series: [
+        {key: 'growth', label: 'Growth %', color: '#10b981', format: 'percent'},
+        {key: 'benchmark', label: 'Benchmark', color: '#64748b', format: 'percent'}
+    ],
+    labelColumnWidth: 150,
+    height: 280
+});
+```
+
+**Global Accessibility:**
+```javascript
+// Function available globally
+window.generateColumnBarChart(options);
+window.setupChartTooltips(container);
+```
+
+**Function Output:**
+- Creates and injects SVG into container
+- Returns SVG element for further manipulation
+- Automatically sets up tooltips
+
+**Configuration Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `containerId` | string | required | ID of target container element |
+| `data` | Array | [] | Array of data objects (one per column) |
+| `series` | Array | [] | Series definitions [{key, label, color, format}] |
+| `labelColumnWidth` | number | 150 | Width of label column in pixels |
+| `height` | number | 350 | Chart height in pixels |
+| `title` | string | '' | Chart title |
+| `yAxis.title` | string | 'Price' | Y axis title |
+| `yAxis.labelFormatter` | function | (v) => '$' + v.toFixed(2) | Custom label formatter |
+| `showGuides` | boolean | true | Show vertical alignment guides |
+| `showBoundaries` | boolean | true | Show column boundary markers |
+
+**Build Status:** Succeeded with 0 errors
