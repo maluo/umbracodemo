@@ -279,7 +279,7 @@ public class ExcelExportService : IExcelExportService
             var cell = worksheet.Cell(row, i + 1);
             cell.Value = columns[i].HeaderText;
             ApplyRichText(cell, columns[i].HeaderText, options.HeaderFont);
-            cell.Style.Alignment.Horizontal = GetAlignment(columns[i].Alignment);
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
 
             // Set column width if specified
             if (columns[i].Width > 0)
@@ -309,7 +309,7 @@ public class ExcelExportService : IExcelExportService
 
                 cell.Value = text;
                 ApplyFontStyle(cell, options.DataFont);
-                cell.Style.Alignment.Horizontal = GetAlignment(column.Alignment);
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
 
                 if (options.ShowBorders)
                 {
