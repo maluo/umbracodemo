@@ -144,7 +144,7 @@ public class ExcelExportOptions
     /// <summary>
     /// Disclaimer font style
     /// </summary>
-    public ExcelFontStyle DisclaimerFont { get; set; } = new ExcelFontStyle { FontSize = 8, FontColor = "#666666" };
+    public ExcelFontStyle DisclaimerFont { get; set; } = new ExcelFontStyle { FontSize = 8, FontColor = "#000000" };
 
     // Header options
     /// <summary>

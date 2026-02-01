@@ -708,7 +708,7 @@ public class PdfExportService : IPdfExportService
         var disclaimerLines = options.Disclaimer!.Split('\n');
         foreach (var line in disclaimerLines)
         {
-            DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 12, fontFooter, fontBold, XBrushes.DarkGray, XStringAlignment.Near);
+            DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 12, fontFooter, fontBold, XBrushes.Black, XStringAlignment.Near);
             yPos += 12;
         }
 

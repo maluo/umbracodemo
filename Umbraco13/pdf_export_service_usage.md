@@ -305,3 +305,59 @@ private double DrawPageHeader(...)
 
 **Build Status:** Succeeded with 0 errors
 
+### 2026-01-31: Fix Disclaimer Color in PDF and Excel Exports
+
+**Request:** "pdf print and excel print, the disclaimer part seems not bolded, and please just use regular color and text, no need to make a grey"
+
+**Changes Made:**
+
+**1. PDF Export - Changed Disclaimer Color from Gray to Black**
+
+**File:** `Services/PdfExportService.cs` (Line 711)
+
+```csharp
+// Before:
+DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 12, fontFooter, fontBold, XBrushes.DarkGray, XStringAlignment.Near);
+
+// After:
+DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 12, fontFooter, fontBold, XBrushes.Black, XStringAlignment.Near);
+```
+
+**2. Excel Export - Changed Disclaimer Color from Gray to Black**
+
+**File:** `Services/ExcelExportService.cs` (Line 147)
+
+```csharp
+// Before:
+public ExcelFontStyle DisclaimerFont { get; set; } = new ExcelFontStyle { FontSize = 8, FontColor = "#666666" };
+
+// After:
+public ExcelFontStyle DisclaimerFont { get; set; } = new ExcelFontStyle { FontSize = 8, FontColor = "#000000" };
+```
+
+**Benefits:**
+
+| Before | After |
+|--------|-------|
+| Disclaimer text in gray (#666666 / DarkGray) | Disclaimer text in black (#000000) |
+| Less readable | Better readability |
+| Inconsistent with main content | Consistent black text |
+
+**Bold Text Support:**
+- PDF: Supports **bold** markup within disclaimer text via `DrawFormattedText` function
+- Excel: If disclaimer contains `**` markers, entire cell becomes bold (ClosedXML limitation)
+
+**Build Status:** Succeeded with 0 errors
+
+---
+
+## Summary of Recent Changes (2026-01-31)
+
+| Date | Change | Files Modified |
+|------|--------|----------------|
+| 2026-01-31 | Reduce empty space between header and table | `PdfExportService.cs` (lines 287-291, 483-517) |
+| 2026-01-31 | Change disclaimer color from gray to black | `PdfExportService.cs` (line 711), `ExcelExportService.cs` (line 147) |
+
+---
+
+**End of Change Log**

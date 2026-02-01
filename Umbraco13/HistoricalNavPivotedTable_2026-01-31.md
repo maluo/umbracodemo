@@ -1631,4 +1631,59 @@ private double DrawPageHeader(...)
 
 ---
 
+## Recent Updates - Fix Disclaimer Color in PDF and Excel Exports (2026-01-31)
+
+### Change: Change Disclaimer Text from Gray to Black
+
+**Request:** "pdf print and excel print, the disclaimer part seems not bolded, and please just use regular color and text, no need to make a grey"
+
+**Root Cause:**
+Both PDF and Excel export services were using gray color for disclaimer text:
+- PDF: `XBrushes.DarkGray`
+- Excel: `FontColor = "#666666"` (medium gray)
+
+**Implementation:**
+
+**Files Modified:**
+1. `Services/PdfExportService.cs` (Line 711)
+2. `Services/ExcelExportService.cs` (Line 147)
+
+**1. PDF Export Change:**
+
+```csharp
+// Before:
+DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 12, fontFooter, fontBold, XBrushes.DarkGray, XStringAlignment.Near);
+
+// After:
+DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 12, fontFooter, fontBold, XBrushes.Black, XStringAlignment.Near);
+```
+
+**2. Excel Export Change:**
+
+```csharp
+// Before:
+public ExcelFontStyle DisclaimerFont { get; set; } = new ExcelFontStyle { FontSize = 8, FontColor = "#666666" };
+
+// After:
+public ExcelFontStyle DisclaimerFont { get; set; } = new ExcelFontStyle { FontSize = 8, FontColor = "#000000" };
+```
+
+**Bold Text Support:**
+
+- **PDF**: The `DrawFormattedText` function supports **bold** markup within disclaimer text. Text between `**` markers is rendered bold.
+
+- **Excel**: The `ApplyRichText` function detects `**` markers. If present, the entire disclaimer cell becomes bold (ClosedXML limitation - partial cell formatting not supported).
+
+**Benefits:**
+
+| Aspect | Before | After |
+|--------|--------|-------|
+| Color | Gray (#666666 / DarkGray) | Black (#000000) |
+| Readability | Lower contrast, harder to read | High contrast, easy to read |
+| Consistency | Different from main content | Matches main content style |
+
+**Build Status:** Succeeded with 0 errors
+
+---
+
 **End of Documentation**
