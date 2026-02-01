@@ -284,9 +284,10 @@ public class PdfExportService : IPdfExportService
         var itemsOnCurrentPage = 0;
         var firstItemOnPage = 1;
 
-        // Draw first page header and table header (with extra spacing after header)
-        DrawPageHeader(page, gfx, currentPageNum, options, font, fontHeader);
-        var firstPageTableTop = options.MarginTop + 30; // Extra 30 units spacing for first page
+        // Draw first page header and calculate where table should start
+        double headerHeight = DrawPageHeader(page, gfx, currentPageNum, options, font, fontHeader);
+        // Calculate table position: header end + minimal spacing (15 units)
+        var firstPageTableTop = headerHeight + 15;
         DrawTableHeader(gfx, firstPageTableTop, columnWidths, columns, fontBold, options);
 
         // Data Rows
@@ -481,12 +482,13 @@ public class PdfExportService : IPdfExportService
 
     /// <summary>
     /// Draw first page header (report title and subtitle)
+    /// Returns the Y position after the header (header bottom edge)
     /// </summary>
-    private void DrawPageHeader(PdfPage page, XGraphics gfx, int pageNum, PdfExportOptions options, XFont font, XFont fontHeader)
+    private double DrawPageHeader(PdfPage page, XGraphics gfx, int pageNum, PdfExportOptions options, XFont font, XFont fontHeader)
     {
         // Only first page gets full header
         if (pageNum != 1)
-            return;
+            return 20; // Return minimal position for non-first pages
 
         // First page - full title and subtitle (left aligned)
         double yPos = 30;
@@ -510,6 +512,8 @@ public class PdfExportService : IPdfExportService
                 yPos += 15;
             }
         }
+
+        return yPos; // Return the Y position after all header content
     }
 
     /// <summary>

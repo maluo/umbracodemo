@@ -238,3 +238,70 @@ builder.Services.AddScoped<IPdfExportService, PdfExportService>();
 - **Interface:** `Services/IPdfExportService.cs`
 - **Implementation:** `Services/PdfExportService.cs`
 - **Models:** `Services/PdfColumnDefinition.cs`, `Services/PdfExportOptions.cs` (defined in PdfExportService.cs)
+
+---
+
+## Change Log
+
+### 2026-01-31: Reduce Empty Space Between Header and Table
+
+**Request:** "for the pdf export remove some empty space between header and main table. But don't make the multi-line headers overlap with the table."
+
+**Changes Made:**
+
+**File:** `Services/PdfExportService.cs`
+
+**1. Dynamic Table Position Calculation (Lines 287-291):**
+
+```csharp
+// Before:
+DrawPageHeader(page, gfx, currentPageNum, options, font, fontHeader);
+var firstPageTableTop = options.MarginTop + 30; // Extra 30 units spacing for first page
+DrawTableHeader(gfx, firstPageTableTop, columnWidths, columns, fontBold, options);
+
+// After:
+// Draw first page header and calculate where table should start
+double headerHeight = DrawPageHeader(page, gfx, currentPageNum, options, font, fontHeader);
+// Calculate table position: header end + minimal spacing (15 units)
+var firstPageTableTop = headerHeight + 15;
+DrawTableHeader(gfx, firstPageTableTop, columnWidths, columns, fontBold, options);
+```
+
+**2. Modified DrawPageHeader Return Type (Lines 483-517):**
+
+```csharp
+// Before: private void DrawPageHeader(...)
+// After:  private double DrawPageHeader(...)
+
+/// <summary>
+/// Draw first page header (report title and subtitle)
+/// Returns the Y position after the header (header bottom edge)
+/// </summary>
+private double DrawPageHeader(...)
+{
+    if (pageNum != 1)
+        return 20; // Return minimal position for non-first pages
+
+    // Draw header...
+    return yPos; // Return the Y position after all header content
+}
+```
+
+**Benefits:**
+
+| Before | After |
+|--------|-------|
+| Fixed spacing: `MarginTop + 30 = 130` | Dynamic: `headerHeight + 15` |
+| 60-80 units of empty space | Only 15 units spacing |
+| Header overlap risk with multi-line | Automatically adjusts for any header height |
+
+**Space Savings:**
+
+| Header Lines | Before | After | Saved |
+|--------------|--------|-------|-------|
+| 1 title line | Table at 130 | Table at ~65 | ~50 units |
+| 2 title lines | Table at 130 | Table at ~85 | ~30 units |
+| With subtitle | Table at 130 | Table at ~110 | ~20 units |
+
+**Build Status:** Succeeded with 0 errors
+

@@ -373,10 +373,19 @@ function generateColumnBarChart(options) {
  * Setup tooltip functionality for chart bars
  */
 function setupChartTooltips(container) {
-    const tooltip = document.createElement('div');
-    tooltip.id = 'chart-tooltip-' + Math.random().toString(36).substr(2, 9);
-    tooltip.style.cssText = 'position: absolute; background-color: rgba(0, 0, 0, 0.8); color: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.2s ease; z-index: 1000; white-space: nowrap;';
-    container.appendChild(tooltip);
+    // Find or create tooltip element
+    let tooltip = document.getElementById('chart-tooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'chart-tooltip';
+        tooltip.style.cssText = 'position: absolute; background-color: rgba(0, 0, 0, 0.8); color: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.2s ease; z-index: 1000; white-space: nowrap;';
+        // Append to parent container (not the chart container) so it survives re-renders
+        if (container.parentElement) {
+            container.parentElement.appendChild(tooltip);
+        } else {
+            container.appendChild(tooltip);
+        }
+    }
 
     const bars = container.querySelectorAll('.chart-bar');
     bars.forEach(bar => {
@@ -460,258 +469,33 @@ window.setupChartTooltips = setupChartTooltips;
         }
     }
 
-    // Render SVG composite bar chart
+    // Render SVG composite bar chart - uses generic chart generator
     function renderChart(paginatedNavs) {
         const svg = document.getElementById('nav-chart');
-        const container = document.getElementById('nav-chart-container');
-        if (!svg || paginatedNavs.length === 0) {
-            if (svg) {
-                svg.setAttribute('viewBox', '0 0 600 350');
-                svg.innerHTML = '<text x="300" y="175" text-anchor="middle" fill="#6c757d">No data available</text>';
-            }
+        if (!svg) return;
+
+        if (paginatedNavs.length === 0) {
+            svg.setAttribute('viewBox', '0 0 600 350');
+            svg.innerHTML = '<text x="300" y="175" text-anchor="middle" fill="#6c757d">No data available</text>';
             return;
         }
 
-        // Get actual container width for full-screen expansion
-        const containerWidth = container.clientWidth || 1200;
-        const height = 350;
-
-        // Table column dimensions (for reference)
-        const labelColumnWidth = 150;  // Width of label column in table
-
-        // Set viewBox to actual container width for full expansion
-        const totalWidth = containerWidth;
-        svg.setAttribute('viewBox', `0 0 ${totalWidth} ${height}`);
-
-        // Calculate dynamic column width based on available space
-        const availableWidth = totalWidth - labelColumnWidth - 20; // Minus label column and right padding
-        const dateColumnWidth = availableWidth / paginatedNavs.length;  // Distribute evenly
-
-        // Chart area dimensions - bars start at labelColumnWidth (150px)
-        const chartLeft = labelColumnWidth;  // Y axis at 150px (label column boundary)
-        const padding = { top: 40, right: 20, bottom: 70, left: chartLeft };
-        const chartWidth = totalWidth - chartLeft - padding.right;
-        const chartHeight = height - padding.top - padding.bottom;
-
-        // Clear previous content
-        svg.innerHTML = '';
-
-        // Find min and max values for Y axis scale
-        let allValues = [];
-        paginatedNavs.forEach(nav => {
-            allValues.push(nav.NavPrice, nav.MarketPrice);
-        });
-        const minValue = Math.min(...allValues) * 0.95;
-        const maxValue = Math.max(...allValues) * 1.05;
-        const valueRange = maxValue - minValue;
-
-        // Create SVG namespace
-        const ns = 'http://www.w3.org/2000/svg';
-
-        // Function to convert value to Y coordinate
-        const valueToY = (value) => {
-            return padding.top + chartHeight - ((value - minValue) / valueRange) * chartHeight;
-        };
-
-        // Function to convert index to X coordinate for bar group (align with table columns)
-        // Bar groups are centered within each 120px date column
-        const indexToGroupX = (index) => {
-            return chartLeft + (index * dateColumnWidth) + (dateColumnWidth / 2);
-        };
-
-        // Calculate bar dimensions based on dynamic column width
-        const barWidth = Math.min(50, dateColumnWidth * 0.35);  // Bar width scales with column (max 50px)
-        const barGap = Math.min(12, dateColumnWidth * 0.08);     // Gap scales with column (max 12px)
-
-        // Calculate bar positions within each column - centered in column
-        const navBarX = (columnIndex) => {
-            const columnCenter = chartLeft + (columnIndex * dateColumnWidth) + (dateColumnWidth / 2);
-            return columnCenter - barWidth - (barGap / 2);
-        };
-        const marketBarX = (columnIndex) => {
-            const columnCenter = chartLeft + (columnIndex * dateColumnWidth) + (dateColumnWidth / 2);
-            return columnCenter + (barGap / 2);
-        };
-
-        // Draw Y axis grid lines and labels
-        const gridLineCount = 5;
-        for (let i = 0; i <= gridLineCount; i++) {
-            const value = minValue + (valueRange * i / gridLineCount);
-            const y = valueToY(value);
-
-            // Grid line - spans from Y axis (150px) to right edge
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', chartLeft);
-            line.setAttribute('y1', y);
-            line.setAttribute('x2', totalWidth - padding.right);
-            line.setAttribute('y2', y);
-            line.setAttribute('stroke', '#e0e0e0');
-            line.setAttribute('stroke-width', '1');
-            line.setAttribute('stroke-dasharray', '4,4');
-            svg.appendChild(line);
-
-            // Y axis label - positioned to the left of Y axis (within label column)
-            const label = document.createElementNS(ns, 'text');
-            label.setAttribute('x', chartLeft - 10);
-            label.setAttribute('y', y + 4);
-            label.setAttribute('text-anchor', 'end');
-            label.setAttribute('font-size', '11');
-            label.setAttribute('fill', '#6c757d');
-            label.textContent = '$' + value.toFixed(2);
-            svg.appendChild(label);
-        }
-
-        // Draw Y axis line at label column boundary (150px)
-        const yAxis = document.createElementNS(ns, 'line');
-        yAxis.setAttribute('x1', chartLeft);
-        yAxis.setAttribute('y1', padding.top);
-        yAxis.setAttribute('x2', chartLeft);
-        yAxis.setAttribute('y2', height - padding.bottom);
-        yAxis.setAttribute('stroke', '#495057');
-        yAxis.setAttribute('stroke-width', '2');
-        svg.appendChild(yAxis);
-
-        // Draw vertical divider line (same as Y axis - visual marker)
-        const dividerLine = document.createElementNS(ns, 'line');
-        dividerLine.setAttribute('x1', labelColumnWidth);
-        dividerLine.setAttribute('y1', padding.top - 10);
-        dividerLine.setAttribute('x2', labelColumnWidth);
-        dividerLine.setAttribute('y2', height - padding.bottom);
-        dividerLine.setAttribute('stroke', '#dee2e6');
-        dividerLine.setAttribute('stroke-width', '2');
-        svg.appendChild(dividerLine);
-
-        // Draw vertical alignment guide lines for each bar group (connects chart to table)
-        paginatedNavs.forEach((nav, index) => {
-            const groupCenter = indexToGroupX(index);
-
-            // Draw subtle vertical dashed line from bar group to bottom
-            const guideLine = document.createElementNS(ns, 'line');
-            guideLine.setAttribute('x1', groupCenter);
-            guideLine.setAttribute('y1', padding.top);
-            guideLine.setAttribute('x2', groupCenter);
-            guideLine.setAttribute('y2', height - padding.bottom);
-            guideLine.setAttribute('stroke', '#3b82f6');
-            guideLine.setAttribute('stroke-width', '1');
-            guideLine.setAttribute('stroke-dasharray', '3,3');
-            guideLine.setAttribute('opacity', '0.15');
-            svg.appendChild(guideLine);
-        });
-
-        // Draw column boundary markers (vertical lines between date columns)
-        paginatedNavs.forEach((nav, index) => {
-            const colRightEdge = chartLeft + ((index + 1) * dateColumnWidth);
-
-            // Draw faint vertical line at column boundary
-            const colBoundary = document.createElementNS(ns, 'line');
-            colBoundary.setAttribute('x1', colRightEdge);
-            colBoundary.setAttribute('y1', padding.top);
-            colBoundary.setAttribute('x2', colRightEdge);
-            colBoundary.setAttribute('y2', height - padding.bottom);
-            colBoundary.setAttribute('stroke', '#e9ecef');
-            colBoundary.setAttribute('stroke-width', '1');
-            colBoundary.setAttribute('stroke-dasharray', '2,2');
-            svg.appendChild(colBoundary);
-        });
-
-        // Draw bars and X axis labels
-        paginatedNavs.forEach((nav, index) => {
-            const groupX = indexToGroupX(index);
-
-            // NAV Price bar (blue) - positioned at left side of column (consistent position)
-            const navPriceY = valueToY(nav.NavPrice);
-            const navPriceHeight = padding.top + chartHeight - navPriceY;
-            const navBar = document.createElementNS(ns, 'rect');
-            navBar.setAttribute('x', navBarX(index));
-            navBar.setAttribute('y', navPriceY);
-            navBar.setAttribute('width', barWidth);
-            navBar.setAttribute('height', navPriceHeight);
-            navBar.setAttribute('fill', '#3b82f6');
-            navBar.setAttribute('rx', '3');
-            navBar.setAttribute('class', 'chart-bar');
-            navBar.setAttribute('data-value', nav.NavPrice.toFixed(2));
-            navBar.setAttribute('data-type', 'NAV Price');
-            svg.appendChild(navBar);
-
-            // Market Price bar (green) - positioned at right side of column (consistent position)
-            const marketPriceY = valueToY(nav.MarketPrice);
-            const marketPriceHeight = padding.top + chartHeight - marketPriceY;
-            const marketBar = document.createElementNS(ns, 'rect');
-            marketBar.setAttribute('x', marketBarX(index));
-            marketBar.setAttribute('y', marketPriceY);
-            marketBar.setAttribute('width', barWidth);
-            marketBar.setAttribute('height', marketPriceHeight);
-            marketBar.setAttribute('fill', '#22c55e');
-            marketBar.setAttribute('rx', '3');
-            marketBar.setAttribute('class', 'chart-bar');
-            marketBar.setAttribute('data-value', nav.MarketPrice.toFixed(2));
-            marketBar.setAttribute('data-type', 'Market Price');
-            svg.appendChild(marketBar);
-
-            // X axis label (date) - centered in column
-            const dateLabel = document.createElementNS(ns, 'text');
-            dateLabel.setAttribute('x', groupX);
-            dateLabel.setAttribute('y', height - padding.bottom + 25);
-            dateLabel.setAttribute('text-anchor', 'middle');
-            dateLabel.setAttribute('font-size', '12');
-            dateLabel.setAttribute('font-weight', '500');
-            dateLabel.setAttribute('fill', '#495057');
-            dateLabel.textContent = formatDate(nav.NavDate);
-            svg.appendChild(dateLabel);
-        });
-
-        // Draw X axis line
-        const xAxis = document.createElementNS(ns, 'line');
-        xAxis.setAttribute('x1', chartLeft);
-        xAxis.setAttribute('y1', height - padding.bottom);
-        xAxis.setAttribute('x2', totalWidth - padding.right);
-        xAxis.setAttribute('y2', height - padding.bottom);
-        xAxis.setAttribute('stroke', '#495057');
-        xAxis.setAttribute('stroke-width', '2');
-        svg.appendChild(xAxis);
-
-        // Y axis title (rotated, positioned in label column)
-        const yAxisTitle = document.createElementNS(ns, 'text');
-        yAxisTitle.setAttribute('x', -height / 2);
-        yAxisTitle.setAttribute('y', 15);
-        yAxisTitle.setAttribute('transform', 'rotate(-90)');
-        yAxisTitle.setAttribute('text-anchor', 'middle');
-        yAxisTitle.setAttribute('font-size', '12');
-        yAxisTitle.setAttribute('font-weight', 'bold');
-        yAxisTitle.setAttribute('fill', '#495057');
-        yAxisTitle.textContent = 'Price (USD)';
-        svg.appendChild(yAxisTitle);
-
-        // Add tooltip event listeners
-        setupChartTooltips(svg, paginatedNavs);
-    }
-
-    // Setup tooltip functionality for chart bars
-    function setupChartTooltips(svg, navData) {
-        const tooltip = document.getElementById('chart-tooltip');
-        if (!tooltip) return;
-
-        const bars = svg.querySelectorAll('.chart-bar');
-        bars.forEach(bar => {
-            bar.addEventListener('mouseenter', function(e) {
-                const value = this.getAttribute('data-value');
-                const type = this.getAttribute('data-type');
-                const fill = this.getAttribute('fill');
-                const color = fill === '#3b82f6' ? '#3b82f6' : '#22c55e';
-                tooltip.innerHTML = `<strong style="color: ${color}">${type}</strong><br>$${value}`;
-                tooltip.classList.add('show');
-            });
-
-            bar.addEventListener('mousemove', function(e) {
-                const container = document.getElementById('nav-chart-container');
-                const rect = container.getBoundingClientRect();
-                tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
-                tooltip.style.top = (e.clientY - rect.top - 40) + 'px';
-            });
-
-            bar.addEventListener('mouseleave', function() {
-                tooltip.classList.remove('show');
-            });
+        generateColumnBarChart({
+            containerId: 'nav-chart',
+            data: paginatedNavs,
+            series: [
+                { key: 'NavPrice', label: 'NAV Price', color: '#3b82f6', format: 'currency' },
+                { key: 'MarketPrice', label: 'Market Price', color: '#22c55e', format: 'currency' }
+            ],
+            labelColumnWidth: 150,
+            height: 350,
+            title: 'NAV Price vs Market Price',
+            yAxis: {
+                title: 'Price (USD)',
+                labelFormatter: (v) => '$' + v.toFixed(2)
+            },
+            showGuides: true,
+            showBoundaries: true
         });
     }
 
