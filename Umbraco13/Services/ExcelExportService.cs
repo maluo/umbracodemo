@@ -86,6 +86,22 @@ public class ExcelFontStyle
 }
 
 /// <summary>
+/// Defines a custom last row for Excel export
+/// </summary>
+public class ExcelLastRowDefinition
+{
+    /// <summary>
+    /// Cell values for the last row (index maps to column position)
+    /// </summary>
+    public List<string> CellValues { get; set; } = new();
+
+    /// <summary>
+    /// Optional custom font style for the last row
+    /// </summary>
+    public ExcelFontStyle? FontStyle { get; set; }
+}
+
+/// <summary>
 /// Options for Excel export
 /// </summary>
 public class ExcelExportOptions
@@ -114,6 +130,11 @@ public class ExcelExportOptions
     /// Disclaimer text (multi-line supported with \n, use **bold** for bold text)
     /// </summary>
     public string? Disclaimer { get; set; }
+
+    /// <summary>
+    /// Optional custom last row with user-provided values
+    /// </summary>
+    public ExcelLastRowDefinition? LastRow { get; set; }
 
     // Header styling
     /// <summary>
@@ -204,6 +225,13 @@ public class ExcelExportService : IExcelExportService
         // Draw data rows
         DrawDataRows(worksheet, currentRow, dataList, columns, options);
         currentRow += dataList.Count;
+
+        // Draw custom last row if provided
+        if (options.LastRow != null && options.LastRow.CellValues.Count > 0)
+        {
+            DrawLastRow(worksheet, currentRow, columns, options);
+            currentRow++;
+        }
 
         // Draw footer
         currentRow = DrawFooter(worksheet, currentRow, columns.Count, options);
@@ -316,6 +344,34 @@ public class ExcelExportService : IExcelExportService
                     cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     cell.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Draw custom last row with user-provided values
+    /// </summary>
+    private void DrawLastRow(IXLWorksheet worksheet, int row, IList<ExcelColumnDefinition> columns, ExcelExportOptions options)
+    {
+        var fontStyle = options.LastRow?.FontStyle ?? options.DataFont;
+
+        for (int colIndex = 0; colIndex < columns.Count; colIndex++)
+        {
+            var cell = worksheet.Cell(row, colIndex + 1);
+
+            // Use provided value if available, otherwise empty string
+            string cellValue = colIndex < options.LastRow!.CellValues.Count
+                ? options.LastRow.CellValues[colIndex]
+                : "";
+
+            cell.Value = cellValue;
+            ApplyFontStyle(cell, fontStyle);
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+
+            if (options.ShowBorders)
+            {
+                cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                cell.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
             }
         }
     }
