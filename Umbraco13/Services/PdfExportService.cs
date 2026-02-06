@@ -46,6 +46,48 @@ public class PdfColumnDefinition
 }
 
 /// <summary>
+/// Font styling options for PDF export
+/// </summary>
+public class PdfFontStyle
+{
+    /// <summary>
+    /// Font family name (default: "Arial")
+    /// </summary>
+    public string FontFamily { get; set; } = "Arial";
+
+    /// <summary>
+    /// Font size in points (default: 10)
+    /// </summary>
+    public double FontSize { get; set; } = 10;
+
+    /// <summary>
+    /// Bold text (default: false)
+    /// </summary>
+    public bool Bold { get; set; }
+
+    /// <summary>
+    /// Italic text (default: false)
+    /// </summary>
+    public bool Italic { get; set; }
+}
+
+/// <summary>
+/// Defines a custom last row for PDF export
+/// </summary>
+public class PdfLastRowDefinition
+{
+    /// <summary>
+    /// Cell values for the last row (index maps to column position)
+    /// </summary>
+    public List<string> CellValues { get; set; } = new();
+
+    /// <summary>
+    /// Optional custom font style for the last row
+    /// </summary>
+    public PdfFontStyle? FontStyle { get; set; }
+}
+
+/// <summary>
 /// Options for PDF export
 /// </summary>
 public class PdfExportOptions
@@ -146,6 +188,11 @@ public class PdfExportOptions
     public string? Disclaimer { get; set; }
 
     /// <summary>
+    /// Optional custom last row with user-provided values
+    /// </summary>
+    public PdfLastRowDefinition? LastRow { get; set; }
+
+    /// <summary>
     /// Optional callback to get the total count (useful when passing a paged list)
     /// </summary>
     public Func<int>? GetTotalCount { get; set; }
@@ -159,6 +206,16 @@ public class PdfExportOptions
     /// Label for average row (default: "Average")
     /// </summary>
     public string AverageRowLabel { get; set; } = "Average";
+
+    /// <summary>
+    /// Height in pixels for the heading section (title + subtitle). 0 = auto-height based on content (default)
+    /// </summary>
+    public double HeadingHeightPixels { get; set; } = 0;
+
+    /// <summary>
+    /// Height in pixels for the disclaimer section. 0 = auto-height based on content (default)
+    /// </summary>
+    public double DisclaimerHeightPixels { get; set; } = 0;
 }
 
 /// <summary>
@@ -332,6 +389,12 @@ public class PdfExportService : IPdfExportService
             yPos = DrawAverageRow(gfx, yPos, dataList, columnWidths, columns, font, fontBold, options);
         }
 
+        // Draw custom last row if provided
+        if (options.LastRow != null && options.LastRow.CellValues.Count > 0)
+        {
+            yPos = DrawLastRow(gfx, yPos, columnWidths, columns, font, fontBold, options);
+        }
+
         // Draw disclaimer immediately after last table row (if provided)
         if (!string.IsNullOrEmpty(options.Disclaimer))
         {
@@ -493,12 +556,16 @@ public class PdfExportService : IPdfExportService
         // First page - full title and subtitle (left aligned)
         double yPos = 30;
 
+        // Calculate custom line height if heading height is specified (convert pixels to points: 1 pixel = 0.75 points)
+        double titleLineHeight = options.HeadingHeightPixels > 0 ? options.HeadingHeightPixels * 0.75 : 20;
+        double subtitleLineHeight = options.HeadingHeightPixels > 0 ? options.HeadingHeightPixels * 0.75 : 15;
+
         // Support multi-line title with **bold** markup
         var titleLines = options.ReportTitle.Split('\n');
         foreach (var line in titleLines)
         {
-            DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 20, font, fontHeader, XBrushes.Black, XStringAlignment.Near);
-            yPos += 20;
+            DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, titleLineHeight, font, fontHeader, XBrushes.Black, XStringAlignment.Near);
+            yPos += titleLineHeight;
         }
 
         // Support multi-line subtitle with **bold** markup
@@ -508,8 +575,8 @@ public class PdfExportService : IPdfExportService
             var subtitleLines = options.Subtitle.Split('\n');
             foreach (var line in subtitleLines)
             {
-                DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 15, font, fontHeader, XBrushes.Black, XStringAlignment.Near);
-                yPos += 15;
+                DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, subtitleLineHeight, font, fontHeader, XBrushes.Black, XStringAlignment.Near);
+                yPos += subtitleLineHeight;
             }
         }
 
@@ -679,6 +746,63 @@ public class PdfExportService : IPdfExportService
     }
 
     /// <summary>
+    /// Draw custom last row with user-provided values
+    /// </summary>
+    private double DrawLastRow(
+        XGraphics gfx,
+        double yPos,
+        List<double> columnWidths,
+        IList<PdfColumnDefinition> columns,
+        XFont font,
+        XFont fontBold,
+        PdfExportOptions options)
+    {
+        var pen = new XPen(XColors.Gray, 0.5);
+        var brushGray = new XSolidBrush(XColor.FromArgb(240, 240, 240));
+
+        // Determine font style for last row
+        XFont rowFont;
+        if (options.LastRow!.FontStyle != null)
+        {
+            var fontStyle = XFontStyleEx.Regular;
+            if (options.LastRow.FontStyle.Bold) fontStyle |= XFontStyleEx.Bold;
+            if (options.LastRow.FontStyle.Italic) fontStyle |= XFontStyleEx.Italic;
+            rowFont = new XFont(
+                options.LastRow.FontStyle.FontFamily,
+                options.LastRow.FontStyle.FontSize,
+                fontStyle
+            );
+        }
+        else
+        {
+            rowFont = fontBold; // Default to bold font for last row
+        }
+
+        double xPos = options.MarginLeft;
+
+        for (int i = 0; i < columns.Count; i++)
+        {
+            var width = columnWidths[i];
+
+            // Draw grey background for the cell
+            gfx.DrawRectangle(pen, brushGray, xPos, yPos, width, options.RowHeight);
+
+            // Use provided value if available, otherwise empty string
+            string cellValue = i < options.LastRow!.CellValues.Count
+                ? options.LastRow.CellValues[i]
+                : "";
+
+            // Draw cell value (centered)
+            gfx.DrawString(cellValue, rowFont, XBrushes.Black,
+                new XRect(xPos, yPos, width, options.RowHeight), XStringFormats.Center);
+
+            xPos += width;
+        }
+
+        return yPos + options.RowHeight;
+    }
+
+    /// <summary>
     /// Check if a value is numeric
     /// </summary>
     private bool IsNumeric(object value)
@@ -704,12 +828,15 @@ public class PdfExportService : IPdfExportService
         gfx.DrawLine(new XPen(XColors.Gray, 0.5), options.MarginLeft, yPos, page.Width - options.MarginLeft, yPos);
         yPos += 10;
 
+        // Calculate custom line height if disclaimer height is specified (convert pixels to points: 1 pixel = 0.75 points)
+        double disclaimerLineHeight = options.DisclaimerHeightPixels > 0 ? options.DisclaimerHeightPixels * 0.75 : 12;
+
         // Draw disclaimer text (support multi-line with \n and **bold** markup), left aligned
         var disclaimerLines = options.Disclaimer!.Split('\n');
         foreach (var line in disclaimerLines)
         {
-            DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 12, fontFooter, fontBold, XBrushes.Black, XStringAlignment.Near);
-            yPos += 12;
+            DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, disclaimerLineHeight, fontFooter, fontBold, XBrushes.Black, XStringAlignment.Near);
+            yPos += disclaimerLineHeight;
         }
 
         return yPos;

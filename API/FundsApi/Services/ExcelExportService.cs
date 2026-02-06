@@ -86,6 +86,13 @@ public class ExcelExportService : IExcelExportService
         titleRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
         titleRange.Style.Border.RightBorder = XLBorderStyleValues.None;
         titleRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+
+        // Apply custom heading height if specified (convert pixels to points: 1 pixel = 0.75 points)
+        if (options.HeadingHeightPixels > 0)
+        {
+            worksheet.Row(currentRow).Height = options.HeadingHeightPixels * 0.75;
+        }
+
         currentRow++;
 
         // Draw subtitle in a single merged cell with text wrapping if provided
@@ -105,6 +112,13 @@ public class ExcelExportService : IExcelExportService
             subtitleRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
             subtitleRange.Style.Border.RightBorder = XLBorderStyleValues.None;
             subtitleRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+
+            // Apply custom heading height if specified (convert pixels to points: 1 pixel = 0.75 points)
+            if (options.HeadingHeightPixels > 0)
+            {
+                worksheet.Row(currentRow).Height = options.HeadingHeightPixels * 0.75;
+            }
+
             currentRow++;
         }
 
@@ -245,6 +259,13 @@ public class ExcelExportService : IExcelExportService
         disclaimerRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
         disclaimerRange.Style.Border.RightBorder = XLBorderStyleValues.None;
         disclaimerRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+
+        // Apply custom disclaimer height if specified (convert pixels to points: 1 pixel = 0.75 points)
+        if (options.DisclaimerHeightPixels > 0)
+        {
+            worksheet.Row(currentRow).Height = options.DisclaimerHeightPixels * 0.75;
+        }
+
         currentRow++;
 
         return currentRow;

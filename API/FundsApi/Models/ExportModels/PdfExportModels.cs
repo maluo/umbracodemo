@@ -46,6 +46,48 @@ public class PdfColumnDefinition
 }
 
 /// <summary>
+/// Font styling options for PDF export
+/// </summary>
+public class PdfFontStyle
+{
+    /// <summary>
+    /// Font family name (default: "Arial")
+    /// </summary>
+    public string FontFamily { get; set; } = "Arial";
+
+    /// <summary>
+    /// Font size in points (default: 10)
+    /// </summary>
+    public double FontSize { get; set; } = 10;
+
+    /// <summary>
+    /// Bold text (default: false)
+    /// </summary>
+    public bool Bold { get; set; }
+
+    /// <summary>
+    /// Italic text (default: false)
+    /// </summary>
+    public bool Italic { get; set; }
+}
+
+/// <summary>
+/// Defines a custom last row for PDF export
+/// </summary>
+public class PdfLastRowDefinition
+{
+    /// <summary>
+    /// Cell values for the last row (index maps to column position)
+    /// </summary>
+    public List<string> CellValues { get; set; } = new();
+
+    /// <summary>
+    /// Optional custom font style for the last row
+    /// </summary>
+    public PdfFontStyle? FontStyle { get; set; }
+}
+
+/// <summary>
 /// Options for PDF export
 /// </summary>
 public class PdfExportOptions
@@ -146,6 +188,11 @@ public class PdfExportOptions
     public string? Disclaimer { get; set; }
 
     /// <summary>
+    /// Optional custom last row with user-provided values
+    /// </summary>
+    public PdfLastRowDefinition? LastRow { get; set; }
+
+    /// <summary>
     /// Optional callback to get the total count (useful when passing a paged list)
     /// </summary>
     public Func<int>? GetTotalCount { get; set; }
@@ -159,4 +206,14 @@ public class PdfExportOptions
     /// Label for average row (default: "Average")
     /// </summary>
     public string AverageRowLabel { get; set; } = "Average";
+
+    /// <summary>
+    /// Height in pixels for the heading section (title + subtitle). 0 = auto-height based on content (default)
+    /// </summary>
+    public double HeadingHeightPixels { get; set; } = 0;
+
+    /// <summary>
+    /// Height in pixels for the disclaimer section. 0 = auto-height based on content (default)
+    /// </summary>
+    public double DisclaimerHeightPixels { get; set; } = 0;
 }

@@ -175,6 +175,16 @@ public class ExcelExportOptions
     /// </summary>
     public int RowsAfterSubtitle { get; set; } = 1;
 
+    /// <summary>
+    /// Height in pixels for the heading section (title + subtitle). 0 = auto-height based on content (default)
+    /// </summary>
+    public double HeadingHeightPixels { get; set; } = 0;
+
+    /// <summary>
+    /// Height in pixels for the disclaimer section. 0 = auto-height based on content (default)
+    /// </summary>
+    public double DisclaimerHeightPixels { get; set; } = 0;
+
     // Data options
     /// <summary>
     /// Auto-fit column widths (default: true)
