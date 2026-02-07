@@ -528,7 +528,7 @@ public class ExcelExportService : IExcelExportService
     }
 
     /// <summary>
-    /// Draw disclaimer section
+    /// Draw disclaimer section with multiline support and per-line rich text formatting
     /// </summary>
     private int DrawDisclaimer(IXLWorksheet worksheet, int startRow, int columnCount, ExcelExportOptions options)
     {
@@ -537,42 +537,51 @@ public class ExcelExportService : IExcelExportService
 
         int currentRow = startRow;
 
-        // Draw disclaimer in a single merged cell with text wrapping
-        var disclaimerCell = worksheet.Cell(currentRow, 1);
-        disclaimerCell.Value = options.Disclaimer;
-        ApplyRichText(disclaimerCell, options.Disclaimer, options.DisclaimerFont);
-        var disclaimerRange = worksheet.Range(currentRow, 1, currentRow, columnCount);
-        disclaimerRange.Merge();
-        disclaimerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-        disclaimerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
-        disclaimerRange.Style.Alignment.WrapText = true;
+        // Split disclaimer by newlines to support per-line formatting
+        string[] disclaimerLines = options.Disclaimer.Split(new[] { "\\n" }, StringSplitOptions.None);
 
-        // Apply or remove borders based on ShowDisclaimerBorders option
-        if (options.ShowDisclaimerBorders)
+        // Draw each line as a separate row to enable per-line rich text formatting
+        for (int lineIndex = 0; lineIndex < disclaimerLines.Length; lineIndex++)
         {
-            disclaimerRange.Style.Border.TopBorder = XLBorderStyleValues.Thin;
-            disclaimerRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
-            disclaimerRange.Style.Border.LeftBorder = XLBorderStyleValues.Thin;
-            disclaimerRange.Style.Border.RightBorder = XLBorderStyleValues.Thin;
-            disclaimerRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
-        }
-        else
-        {
-            // Remove all borders from merged range
-            disclaimerRange.Style.Border.TopBorder = XLBorderStyleValues.None;
-            disclaimerRange.Style.Border.BottomBorder = XLBorderStyleValues.None;
-            disclaimerRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
-            disclaimerRange.Style.Border.RightBorder = XLBorderStyleValues.None;
-            disclaimerRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
-        }
+            var line = disclaimerLines[lineIndex];
+            var disclaimerCell = worksheet.Cell(currentRow, 1);
+            disclaimerCell.Value = line;
+            ApplyRichText(disclaimerCell, line, options.DisclaimerFont, allowBoldFromMarkers: true);
+            var disclaimerRange = worksheet.Range(currentRow, 1, currentRow, columnCount);
+            disclaimerRange.Merge();
+            disclaimerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+            disclaimerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
+            disclaimerRange.Style.Alignment.WrapText = true;
 
-        // Apply custom disclaimer height if specified (convert pixels to points: 1 pixel = 0.75 points)
-        if (options.DisclaimerHeightPixels > 0)
-        {
-            worksheet.Row(currentRow).Height = options.DisclaimerHeightPixels * 0.75;
-        }
+            // Apply or remove borders based on ShowDisclaimerBorders option
+            if (options.ShowDisclaimerBorders)
+            {
+                disclaimerRange.Style.Border.TopBorder = XLBorderStyleValues.Thin;
+                disclaimerRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+                disclaimerRange.Style.Border.LeftBorder = XLBorderStyleValues.Thin;
+                disclaimerRange.Style.Border.RightBorder = XLBorderStyleValues.Thin;
+                disclaimerRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+            }
+            else
+            {
+                // Remove all borders from merged range
+                disclaimerRange.Style.Border.TopBorder = XLBorderStyleValues.None;
+                disclaimerRange.Style.Border.BottomBorder = XLBorderStyleValues.None;
+                disclaimerRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
+                disclaimerRange.Style.Border.RightBorder = XLBorderStyleValues.None;
+                disclaimerRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+            }
 
-        currentRow++;
+            // Apply custom disclaimer height if specified (convert pixels to points: 1 pixel = 0.75 points)
+            // If a custom height is set, divide it by the number of lines to distribute evenly
+            if (options.DisclaimerHeightPixels > 0)
+            {
+                double heightPerLine = options.DisclaimerHeightPixels * 0.75 / disclaimerLines.Length;
+                worksheet.Row(currentRow).Height = heightPerLine;
+            }
+
+            currentRow++;
+        }
 
         return currentRow;
     }
@@ -581,7 +590,8 @@ public class ExcelExportService : IExcelExportService
     /// Apply rich text formatting with **bold** support. Use **text** for bold portions.
     /// Note: ClosedXML doesn't support partial cell formatting, so if ** is present, entire cell is bolded
     /// For title and subtitle: ** markers will bold the entire cell
-    /// For footer and disclaimer: ** markers are stripped without applying bold (respects font style)
+    /// For footer: ** markers are stripped without applying bold (respects font style)
+    /// For disclaimer: ** markers will bold the entire line (each line is drawn separately)
     /// </summary>
     /// <param name="cell">The cell to apply formatting to</param>
     /// <param name="text">The text with optional **bold** markers</param>
