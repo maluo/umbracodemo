@@ -382,11 +382,10 @@ public class FundsController : UmbracoController
             // Configure export options
             var options = new PdfExportOptions
             {
-                ReportTitle = "FUND SUMMARY REPORT\nThis report provides a summary of all funds including their NAV and market prices.\nwhat is more, it is generated using a custom PDF export service.\n financial report",
-                //Subtitle = $"Generated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
+                ReportTitle = "**Annual** Report with **Highlights**",
+                Disclaimer = "This is **bold** text, this is normal, **and bold again**",
                 ItemsPerPage = 50,
-                Disclaimer = "FUND SUMMARY REPORT\nThis report provides a summary of all funds including their NAV and market prices.\nwhat is more, it is generated using a custom PDF export service.\n financial report",
-                FooterText = "This document is confidential and intended for internal use only.",
+                FooterText = "This document is confidential and intended for **internal use only.**",
                 ShowAverageRow = true
             };
 
