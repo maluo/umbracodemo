@@ -165,7 +165,7 @@ public class ExcelExportOptions
     /// <summary>
     /// Disclaimer font style
     /// </summary>
-    public ExcelFontStyle DisclaimerFont { get; set; } = new ExcelFontStyle { FontSize = 8, FontColor = "#000000" };
+    public ExcelFontStyle DisclaimerFont { get; set; } = new ExcelFontStyle { FontSize = 15, FontColor = "#000000", Bold = false };
 
     // Header options
     /// <summary>
@@ -415,6 +415,13 @@ public class ExcelExportService : IExcelExportService
             cell.Value = columns[i].HeaderText;
             ApplyRichText(cell, columns[i].HeaderText, options.HeaderFont);
             cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+
+            // Apply borders to header if ShowBorders is enabled
+            if (options.ShowBorders)
+            {
+                cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                cell.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            }
 
             // Set column width if specified
             if (columns[i].Width > 0)

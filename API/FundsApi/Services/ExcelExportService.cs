@@ -199,6 +199,13 @@ public class ExcelExportService : IExcelExportService
             ApplyRichText(cell, columns[i].HeaderText, options.HeaderFont);
             cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
 
+            // Apply borders to header if ShowBorders is enabled
+            if (options.ShowBorders)
+            {
+                cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                cell.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            }
+
             // Set column width if specified
             if (columns[i].Width > 0)
             {
