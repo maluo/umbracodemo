@@ -110,7 +110,7 @@ public class ExcelExportService : IExcelExportService
         // Draw title in a single merged cell with text wrapping
         var titleCell = worksheet.Cell(currentRow, 1);
         titleCell.Value = options.ReportTitle;
-        ApplyRichText(titleCell, options.ReportTitle, options.TitleFont, allowBoldFromMarkers: true);
+        ApplyRichText(titleCell, options.ReportTitle, options.TitleFont, allowBoldFromMarkers: 1);
         var titleRange = worksheet.Range(currentRow, 1, currentRow, columnCount);
         titleRange.Merge();
         titleRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
@@ -149,7 +149,7 @@ public class ExcelExportService : IExcelExportService
         {
             var subtitleCell = worksheet.Cell(currentRow, 1);
             subtitleCell.Value = options.Subtitle;
-            ApplyRichText(subtitleCell, options.Subtitle, options.SubtitleFont, allowBoldFromMarkers: true);
+            ApplyRichText(subtitleCell, options.Subtitle, options.SubtitleFont, allowBoldFromMarkers: 1);
             var subtitleRange = worksheet.Range(currentRow, 1, currentRow, columnCount);
             subtitleRange.Merge();
             subtitleRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
@@ -196,7 +196,7 @@ public class ExcelExportService : IExcelExportService
         {
             var cell = worksheet.Cell(row, i + 1);
             cell.Value = columns[i].HeaderText;
-            ApplyRichText(cell, columns[i].HeaderText, options.HeaderFont);
+            ApplyRichText(cell, columns[i].HeaderText, options.HeaderFont, allowBoldFromMarkers: 0);
             cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
 
             // Apply borders to header if ShowBorders is enabled
@@ -286,7 +286,7 @@ public class ExcelExportService : IExcelExportService
         // Draw footer in a single merged cell with text wrapping
         var footerCell = worksheet.Cell(currentRow, 1);
         footerCell.Value = options.FooterText;
-        ApplyRichText(footerCell, options.FooterText, options.FooterFont);
+        ApplyRichText(footerCell, options.FooterText, options.FooterFont, allowBoldFromMarkers: 0);
         var footerRange = worksheet.Range(currentRow, 1, currentRow, columnCount);
         footerRange.Merge();
         footerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
@@ -336,7 +336,7 @@ public class ExcelExportService : IExcelExportService
             var line = disclaimerLines[lineIndex];
             var disclaimerCell = worksheet.Cell(currentRow, 1);
             disclaimerCell.Value = line;
-            ApplyRichText(disclaimerCell, line, options.DisclaimerFont, allowBoldFromMarkers: true);
+            ApplyRichText(disclaimerCell, line, options.DisclaimerFont, allowBoldFromMarkers: 2);
             var disclaimerRange = worksheet.Range(currentRow, 1, currentRow, columnCount);
             disclaimerRange.Merge();
             disclaimerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
@@ -378,36 +378,126 @@ public class ExcelExportService : IExcelExportService
 
     /// <summary>
     /// Apply rich text formatting with **bold** support. Use **text** for bold portions.
-    /// Note: ClosedXML doesn't support partial cell formatting, so if ** is present, entire cell is bolded
-    /// For title and subtitle: ** markers will bold the entire cell
+    /// For title and subtitle: ** markers will bold the entire cell (legacy behavior)
     /// For footer: ** markers are stripped without applying bold (respects font style)
-    /// For disclaimer: ** markers will bold the entire line (each line is drawn separately)
+    /// For disclaimer: ** markers bold only the text between them (partial formatting)
     /// </summary>
     /// <param name="cell">The cell to apply formatting to</param>
     /// <param name="text">The text with optional **bold** markers</param>
     /// <param name="fontStyle">The font style to apply</param>
-    /// <param name="allowBoldFromMarkers">If true, ** markers will bold the entire cell. If false, markers are stripped only.</param>
-    private void ApplyRichText(IXLCell cell, string text, ExcelFontStyle fontStyle, bool allowBoldFromMarkers = false)
+    /// <param name="allowBoldFromMarkers">Behavior: 0 = strip only, 1 = bold entire cell, 2 = partial formatting</param>
+    private void ApplyRichText(IXLCell cell, string text, ExcelFontStyle fontStyle, int allowBoldFromMarkers = 0)
     {
-        // Strip ** markers and set value
-        string cleanText = text.Replace("**", "");
-        cell.Value = cleanText;
-
-        // Only apply bold from ** markers if explicitly allowed (for title/subtitle)
-        // For footer/disclaimer, we respect the font style setting and ignore ** markers for bold
-        bool hasBold = text.Contains("**") && allowBoldFromMarkers;
-
-        var style = new ExcelFontStyle
+        // Mode 0: Strip markers and apply font style as-is
+        if (allowBoldFromMarkers == 0)
         {
-            FontName = fontStyle.FontName,
-            FontSize = fontStyle.FontSize,
-            Bold = fontStyle.Bold || hasBold, // Bold if style has bold OR text has ** markers (and allowed)
-            Italic = fontStyle.Italic,
-            FontColor = fontStyle.FontColor,
-            BackgroundColor = fontStyle.BackgroundColor
-        };
+            string cleanText = text.Replace("**", "");
+            cell.Value = cleanText;
+            ApplyFontStyle(cell, fontStyle);
+            return;
+        }
 
-        ApplyFontStyle(cell, style);
+        // Mode 1: Bold entire cell if markers present (legacy behavior for title/subtitle)
+        if (allowBoldFromMarkers == 1)
+        {
+            string cleanText = text.Replace("**", "");
+            cell.Value = cleanText;
+            bool hasBold = text.Contains("**");
+            var style = new ExcelFontStyle
+            {
+                FontName = fontStyle.FontName,
+                FontSize = fontStyle.FontSize,
+                Bold = fontStyle.Bold || hasBold,
+                Italic = fontStyle.Italic,
+                FontColor = fontStyle.FontColor,
+                BackgroundColor = fontStyle.BackgroundColor
+            };
+            ApplyFontStyle(cell, style);
+            return;
+        }
+
+        // Mode 2: Partial formatting (for disclaimer) - bold only text between ** markers
+        // Clear the cell first
+        cell.Value = "";
+        var richText = cell.GetRichText();
+
+        int currentIndex = 0;
+        while (currentIndex < text.Length)
+        {
+            int boldStart = text.IndexOf("**", currentIndex);
+
+            if (boldStart == -1)
+            {
+                // No more bold markers, add remaining text as normal
+                if (currentIndex < text.Length)
+                {
+                    var normalText = text.Substring(currentIndex);
+                    var fragment = richText.AddText(normalText);
+                    if (fontStyle.Bold) fragment.SetBold();
+                    if (fontStyle.Italic) fragment.SetItalic();
+                    fragment.SetFontName(fontStyle.FontName);
+                    fragment.SetFontSize(fontStyle.FontSize);
+                    if (!string.IsNullOrEmpty(fontStyle.FontColor))
+                    {
+                        fragment.SetFontColor(XLColor.FromHtml(fontStyle.FontColor));
+                    }
+                }
+                break;
+            }
+
+            // Add text before bold marker as normal
+            if (boldStart > currentIndex)
+            {
+                var normalText = text.Substring(currentIndex, boldStart - currentIndex);
+                var fragment = richText.AddText(normalText);
+                if (fontStyle.Bold) fragment.SetBold();
+                if (fontStyle.Italic) fragment.SetItalic();
+                fragment.SetFontName(fontStyle.FontName);
+                fragment.SetFontSize(fontStyle.FontSize);
+                if (!string.IsNullOrEmpty(fontStyle.FontColor))
+                {
+                    fragment.SetFontColor(XLColor.FromHtml(fontStyle.FontColor));
+                }
+            }
+
+            // Find end of bold marker
+            int boldEnd = text.IndexOf("**", boldStart + 2);
+            if (boldEnd == -1)
+            {
+                // Unclosed marker, treat rest as normal
+                var remainingText = text.Substring(boldStart);
+                var fragment = richText.AddText(remainingText);
+                if (fontStyle.Bold) fragment.SetBold();
+                if (fontStyle.Italic) fragment.SetItalic();
+                fragment.SetFontName(fontStyle.FontName);
+                fragment.SetFontSize(fontStyle.FontSize);
+                if (!string.IsNullOrEmpty(fontStyle.FontColor))
+                {
+                    fragment.SetFontColor(XLColor.FromHtml(fontStyle.FontColor));
+                }
+                break;
+            }
+
+            // Add bold text
+            var boldText = text.Substring(boldStart + 2, boldEnd - boldStart - 2);
+            var boldFragment = richText.AddText(boldText);
+            boldFragment.SetBold(); // Always bold for text between ** markers
+            if (fontStyle.Italic) boldFragment.SetItalic();
+            boldFragment.SetFontName(fontStyle.FontName);
+            boldFragment.SetFontSize(fontStyle.FontSize);
+            if (!string.IsNullOrEmpty(fontStyle.FontColor))
+            {
+                boldFragment.SetFontColor(XLColor.FromHtml(fontStyle.FontColor));
+            }
+
+            currentIndex = boldEnd + 2;
+        }
+
+        // Apply background color to the entire cell
+        if (!string.IsNullOrEmpty(fontStyle.BackgroundColor))
+        {
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml(fontStyle.BackgroundColor);
+        }
     }
 
     /// <summary>
