@@ -185,6 +185,12 @@ public class ExcelExportOptions
     /// </summary>
     public double DisclaimerHeightPixels { get; set; } = 0;
 
+    /// <summary>
+    /// Minimal width in pixels for the table. 0 = auto-width based on content (default)
+    /// Ensures the table doesn't shrink below this width
+    /// </summary>
+    public double TableMinimalWidthPixels { get; set; } = 0;
+
     // Data options
     /// <summary>
     /// Auto-fit column widths (default: true)
@@ -195,4 +201,19 @@ public class ExcelExportOptions
     /// Show table borders (default: true)
     /// </summary>
     public bool ShowBorders { get; set; } = true;
+
+    /// <summary>
+    /// Show borders around heading section (title and subtitle) (default: false)
+    /// </summary>
+    public bool ShowHeadingBorders { get; set; } = false;
+
+    /// <summary>
+    /// Show borders around disclaimer section (default: false)
+    /// </summary>
+    public bool ShowDisclaimerBorders { get; set; } = false;
+
+    /// <summary>
+    /// Show borders around footer section (default: false)
+    /// </summary>
+    public bool ShowFooterBorders { get; set; } = false;
 }

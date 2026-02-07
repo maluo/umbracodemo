@@ -59,9 +59,45 @@ public class ExcelExportService : IExcelExportService
             worksheet.Columns().AdjustToContents();
         }
 
+        // Enforce minimal table width if specified
+        if (options.TableMinimalWidthPixels > 0)
+        {
+            EnforceMinimalTableWidth(worksheet, columns.Count, options.TableMinimalWidthPixels);
+        }
+
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
         return stream.ToArray();
+    }
+
+    /// <summary>
+    /// Enforce minimal table width by adjusting column widths if needed
+    /// </summary>
+    private void EnforceMinimalTableWidth(IXLWorksheet worksheet, int columnCount, double minimalWidthPixels)
+    {
+        // Calculate current total width in pixels
+        // Excel column width is roughly in characters, 1 character ≈ 7 pixels at default zoom/font
+        const double pixelsPerCharacter = 7.0;
+        double currentTotalWidth = 0;
+
+        for (int i = 1; i <= columnCount; i++)
+        {
+            currentTotalWidth += worksheet.Column(i).Width * pixelsPerCharacter;
+        }
+
+        // If current width is less than minimal, distribute the difference
+        if (currentTotalWidth < minimalWidthPixels)
+        {
+            double widthDifference = minimalWidthPixels - currentTotalWidth;
+            double widthToAddPerColumn = widthDifference / columnCount;
+
+            for (int i = 1; i <= columnCount; i++)
+            {
+                double currentWidth = worksheet.Column(i).Width;
+                double currentWidthInPixels = currentWidth * pixelsPerCharacter;
+                worksheet.Column(i).Width = (currentWidthInPixels + widthToAddPerColumn) / pixelsPerCharacter;
+            }
+        }
     }
 
     /// <summary>
@@ -74,18 +110,31 @@ public class ExcelExportService : IExcelExportService
         // Draw title in a single merged cell with text wrapping
         var titleCell = worksheet.Cell(currentRow, 1);
         titleCell.Value = options.ReportTitle;
-        ApplyRichText(titleCell, options.ReportTitle, options.TitleFont);
+        ApplyRichText(titleCell, options.ReportTitle, options.TitleFont, allowBoldFromMarkers: true);
         var titleRange = worksheet.Range(currentRow, 1, currentRow, columnCount);
         titleRange.Merge();
         titleRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
         titleRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
         titleRange.Style.Alignment.WrapText = true;
-        // Remove all borders from merged range
-        titleRange.Style.Border.TopBorder = XLBorderStyleValues.None;
-        titleRange.Style.Border.BottomBorder = XLBorderStyleValues.None;
-        titleRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
-        titleRange.Style.Border.RightBorder = XLBorderStyleValues.None;
-        titleRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+
+        // Apply or remove borders based on ShowHeadingBorders option
+        if (options.ShowHeadingBorders)
+        {
+            titleRange.Style.Border.TopBorder = XLBorderStyleValues.Thin;
+            titleRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+            titleRange.Style.Border.LeftBorder = XLBorderStyleValues.Thin;
+            titleRange.Style.Border.RightBorder = XLBorderStyleValues.Thin;
+            titleRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+        }
+        else
+        {
+            // Remove all borders from merged range
+            titleRange.Style.Border.TopBorder = XLBorderStyleValues.None;
+            titleRange.Style.Border.BottomBorder = XLBorderStyleValues.None;
+            titleRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
+            titleRange.Style.Border.RightBorder = XLBorderStyleValues.None;
+            titleRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+        }
 
         // Apply custom heading height if specified (convert pixels to points: 1 pixel = 0.75 points)
         if (options.HeadingHeightPixels > 0)
@@ -100,18 +149,31 @@ public class ExcelExportService : IExcelExportService
         {
             var subtitleCell = worksheet.Cell(currentRow, 1);
             subtitleCell.Value = options.Subtitle;
-            ApplyRichText(subtitleCell, options.Subtitle, options.SubtitleFont);
+            ApplyRichText(subtitleCell, options.Subtitle, options.SubtitleFont, allowBoldFromMarkers: true);
             var subtitleRange = worksheet.Range(currentRow, 1, currentRow, columnCount);
             subtitleRange.Merge();
             subtitleRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
             subtitleRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
             subtitleRange.Style.Alignment.WrapText = true;
-            // Remove all borders from merged range
-            subtitleRange.Style.Border.TopBorder = XLBorderStyleValues.None;
-            subtitleRange.Style.Border.BottomBorder = XLBorderStyleValues.None;
-            subtitleRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
-            subtitleRange.Style.Border.RightBorder = XLBorderStyleValues.None;
-            subtitleRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+
+            // Apply or remove borders based on ShowHeadingBorders option
+            if (options.ShowHeadingBorders)
+            {
+                subtitleRange.Style.Border.TopBorder = XLBorderStyleValues.Thin;
+                subtitleRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+                subtitleRange.Style.Border.LeftBorder = XLBorderStyleValues.Thin;
+                subtitleRange.Style.Border.RightBorder = XLBorderStyleValues.Thin;
+                subtitleRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+            }
+            else
+            {
+                // Remove all borders from merged range
+                subtitleRange.Style.Border.TopBorder = XLBorderStyleValues.None;
+                subtitleRange.Style.Border.BottomBorder = XLBorderStyleValues.None;
+                subtitleRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
+                subtitleRange.Style.Border.RightBorder = XLBorderStyleValues.None;
+                subtitleRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+            }
 
             // Apply custom heading height if specified (convert pixels to points: 1 pixel = 0.75 points)
             if (options.HeadingHeightPixels > 0)
@@ -223,12 +285,26 @@ public class ExcelExportService : IExcelExportService
         footerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
         footerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
         footerRange.Style.Alignment.WrapText = true;
-        // Remove all borders from merged range
-        footerRange.Style.Border.TopBorder = XLBorderStyleValues.None;
-        footerRange.Style.Border.BottomBorder = XLBorderStyleValues.None;
-        footerRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
-        footerRange.Style.Border.RightBorder = XLBorderStyleValues.None;
-        footerRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+
+        // Apply or remove borders based on ShowFooterBorders option
+        if (options.ShowFooterBorders)
+        {
+            footerRange.Style.Border.TopBorder = XLBorderStyleValues.Thin;
+            footerRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+            footerRange.Style.Border.LeftBorder = XLBorderStyleValues.Thin;
+            footerRange.Style.Border.RightBorder = XLBorderStyleValues.Thin;
+            footerRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+        }
+        else
+        {
+            // Remove all borders from merged range
+            footerRange.Style.Border.TopBorder = XLBorderStyleValues.None;
+            footerRange.Style.Border.BottomBorder = XLBorderStyleValues.None;
+            footerRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
+            footerRange.Style.Border.RightBorder = XLBorderStyleValues.None;
+            footerRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+        }
+
         currentRow++;
 
         return currentRow;
@@ -253,12 +329,25 @@ public class ExcelExportService : IExcelExportService
         disclaimerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
         disclaimerRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
         disclaimerRange.Style.Alignment.WrapText = true;
-        // Remove all borders from merged range
-        disclaimerRange.Style.Border.TopBorder = XLBorderStyleValues.None;
-        disclaimerRange.Style.Border.BottomBorder = XLBorderStyleValues.None;
-        disclaimerRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
-        disclaimerRange.Style.Border.RightBorder = XLBorderStyleValues.None;
-        disclaimerRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+
+        // Apply or remove borders based on ShowDisclaimerBorders option
+        if (options.ShowDisclaimerBorders)
+        {
+            disclaimerRange.Style.Border.TopBorder = XLBorderStyleValues.Thin;
+            disclaimerRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+            disclaimerRange.Style.Border.LeftBorder = XLBorderStyleValues.Thin;
+            disclaimerRange.Style.Border.RightBorder = XLBorderStyleValues.Thin;
+            disclaimerRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+        }
+        else
+        {
+            // Remove all borders from merged range
+            disclaimerRange.Style.Border.TopBorder = XLBorderStyleValues.None;
+            disclaimerRange.Style.Border.BottomBorder = XLBorderStyleValues.None;
+            disclaimerRange.Style.Border.LeftBorder = XLBorderStyleValues.None;
+            disclaimerRange.Style.Border.RightBorder = XLBorderStyleValues.None;
+            disclaimerRange.Style.Border.DiagonalBorder = XLBorderStyleValues.None;
+        }
 
         // Apply custom disclaimer height if specified (convert pixels to points: 1 pixel = 0.75 points)
         if (options.DisclaimerHeightPixels > 0)
@@ -274,21 +363,28 @@ public class ExcelExportService : IExcelExportService
     /// <summary>
     /// Apply rich text formatting with **bold** support
     /// Note: ClosedXML doesn't support partial cell formatting, so if ** is present, entire cell is bolded
+    /// For title and subtitle: ** markers will bold the entire cell
+    /// For footer and disclaimer: ** markers are stripped without applying bold (respects font style)
     /// </summary>
-    private void ApplyRichText(IXLCell cell, string text, ExcelFontStyle fontStyle)
+    /// <param name="cell">The cell to apply formatting to</param>
+    /// <param name="text">The text with optional **bold** markers</param>
+    /// <param name="fontStyle">The font style to apply</param>
+    /// <param name="allowBoldFromMarkers">If true, ** markers will bold the entire cell. If false, markers are stripped only.</param>
+    private void ApplyRichText(IXLCell cell, string text, ExcelFontStyle fontStyle, bool allowBoldFromMarkers = false)
     {
         // Strip ** markers and set value
         string cleanText = text.Replace("**", "");
         cell.Value = cleanText;
 
-        // Check if text had **bold** markers - if so, apply bold to entire cell
-        bool hasBold = text.Contains("**");
+        // Only apply bold from ** markers if explicitly allowed (for title/subtitle)
+        // For footer/disclaimer, we respect the font style setting and ignore ** markers for bold
+        bool hasBold = text.Contains("**") && allowBoldFromMarkers;
 
         var style = new ExcelFontStyle
         {
             FontName = fontStyle.FontName,
             FontSize = fontStyle.FontSize,
-            Bold = fontStyle.Bold || hasBold, // Bold if style has bold OR text has ** markers
+            Bold = fontStyle.Bold || hasBold, // Bold if style has bold OR text has ** markers (and allowed)
             Italic = fontStyle.Italic,
             FontColor = fontStyle.FontColor,
             BackgroundColor = fontStyle.BackgroundColor

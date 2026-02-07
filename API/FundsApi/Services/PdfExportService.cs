@@ -290,6 +290,24 @@ public class PdfExportService : IPdfExportService
             }
         }
 
+        // Enforce minimal table width if specified
+        if (options.TableMinimalWidthPixels > 0)
+        {
+            double currentTotalWidth = widths.Sum();
+            double minimalWidthPoints = options.TableMinimalWidthPixels * 0.75; // Convert pixels to points
+
+            if (currentTotalWidth < minimalWidthPoints)
+            {
+                double widthDifference = minimalWidthPoints - currentTotalWidth;
+                double widthToAddPerColumn = widthDifference / columns.Count;
+
+                for (int i = 0; i < columns.Count; i++)
+                {
+                    widths[i] += widthToAddPerColumn;
+                }
+            }
+        }
+
         return widths;
     }
 
@@ -365,6 +383,15 @@ public class PdfExportService : IPdfExportService
                 DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, subtitleLineHeight, font, fontHeader, XBrushes.Black, XStringAlignment.Near);
                 yPos += subtitleLineHeight;
             }
+        }
+
+        // Draw borders around heading section if enabled
+        if (options.ShowHeadingBorders)
+        {
+            var pen = new XPen(XColors.Gray, 0.5);
+            double headerStartY = 30;
+            double headerHeight = yPos - headerStartY + 10; // +10 for bottom padding
+            gfx.DrawRectangle(pen, options.MarginLeft, headerStartY, page.Width - (options.MarginLeft * 2), headerHeight);
         }
 
         return yPos; // Return the Y position after all header content
@@ -611,19 +638,24 @@ public class PdfExportService : IPdfExportService
         // Add spacing after last table row
         yPos += 15;
 
-        // Draw disclaimer separator line (full width like table)
-        gfx.DrawLine(new XPen(XColors.Gray, 0.5), options.MarginLeft, yPos, page.Width - options.MarginLeft, yPos);
-        yPos += 10;
-
-        // Calculate custom line height if disclaimer height is specified (convert pixels to points: 1 pixel = 0.75 points)
-        double disclaimerLineHeight = options.DisclaimerHeightPixels > 0 ? options.DisclaimerHeightPixels * 0.75 : 12;
+        // Store start position for border drawing
+        double disclaimerStartY = yPos;
 
         // Draw disclaimer text (support multi-line with \n and **bold** markup), left aligned
         var disclaimerLines = options.Disclaimer!.Split('\n');
         foreach (var line in disclaimerLines)
         {
-            DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, disclaimerLineHeight, fontFooter, fontBold, XBrushes.Black, XStringAlignment.Near);
-            yPos += disclaimerLineHeight;
+            DrawFormattedText(gfx, line.Trim(), options.MarginLeft, yPos, page.Width - options.MarginLeft, 12, fontFooter, fontBold, XBrushes.Black, XStringAlignment.Near);
+            yPos += 12;
+        }
+
+        // Draw borders around disclaimer section if enabled
+        if (options.ShowDisclaimerBorders)
+        {
+            var pen = new XPen(XColors.Gray, 0.5);
+            yPos += 5; // Add bottom padding
+            double disclaimerHeight = yPos - disclaimerStartY;
+            gfx.DrawRectangle(pen, options.MarginLeft, disclaimerStartY, page.Width - (options.MarginLeft * 2), disclaimerHeight);
         }
 
         return yPos;
@@ -681,6 +713,7 @@ public class PdfExportService : IPdfExportService
             return;
 
         double footerY = page.Height - options.MarginBottom - 80;
+        double footerStartY = footerY;
 
         // Line separator
         gfx.DrawLine(new XPen(XColors.Gray, 1), options.MarginLeft, footerY, page.Width - options.MarginLeft, footerY);
@@ -700,6 +733,15 @@ public class PdfExportService : IPdfExportService
         {
             DrawFormattedText(gfx, line.Trim(), 0, footerY, page.Width, 12, fontFooter, fontBold, XBrushes.Black);
             footerY += 12;
+        }
+
+        // Draw borders around footer section if enabled
+        if (options.ShowFooterBorders)
+        {
+            var pen = new XPen(XColors.Gray, 0.5);
+            footerY += 5; // Add bottom padding
+            double footerHeight = footerY - footerStartY;
+            gfx.DrawRectangle(pen, options.MarginLeft, footerStartY, page.Width - (options.MarginLeft * 2), footerHeight);
         }
 
         // Page info below the report footer

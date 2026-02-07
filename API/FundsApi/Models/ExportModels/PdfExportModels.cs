@@ -216,4 +216,25 @@ public class PdfExportOptions
     /// Height in pixels for the disclaimer section. 0 = auto-height based on content (default)
     /// </summary>
     public double DisclaimerHeightPixels { get; set; } = 0;
+
+    /// <summary>
+    /// Minimal width in pixels for the table. 0 = auto-width based on content (default)
+    /// Ensures the table doesn't shrink below this width
+    /// </summary>
+    public double TableMinimalWidthPixels { get; set; } = 0;
+
+    /// <summary>
+    /// Show borders around heading section (title and subtitle) (default: false)
+    /// </summary>
+    public bool ShowHeadingBorders { get; set; } = false;
+
+    /// <summary>
+    /// Show borders around disclaimer section (default: false)
+    /// </summary>
+    public bool ShowDisclaimerBorders { get; set; } = false;
+
+    /// <summary>
+    /// Show borders around footer section (default: false)
+    /// </summary>
+    public bool ShowFooterBorders { get; set; } = false;
 }
