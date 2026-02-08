@@ -104,6 +104,16 @@ public class PdfExportOptions
     public string? DocumentTitle { get; set; }
 
     /// <summary>
+    /// Document author for PDF metadata.
+    /// </summary>
+    public string? Author { get; set; }
+
+    /// <summary>
+    /// Document description/subject for PDF metadata.
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
     /// Optional subtitle displayed below the title on the first page
     /// </summary>
     public string? Subtitle { get; set; }
@@ -356,6 +366,18 @@ public class PdfExportService : IPdfExportService
         document.Info.Title = !string.IsNullOrEmpty(options.DocumentTitle)
             ? options.DocumentTitle
             : options.ReportTitle;
+
+        // Set document author metadata
+        if (!string.IsNullOrEmpty(options.Author))
+        {
+            document.Info.Author = options.Author;
+        }
+
+        // Set document description/subject metadata
+        if (!string.IsNullOrEmpty(options.Description))
+        {
+            document.Info.Subject = options.Description;
+        }
 
         var page = document.AddPage();
         page.Size = options.PageSize;

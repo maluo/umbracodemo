@@ -117,6 +117,18 @@ public class PdfExportService : IPdfExportService
             ? options.DocumentTitle
             : options.ReportTitle;
 
+        // Set document author metadata
+        if (!string.IsNullOrEmpty(options.Author))
+        {
+            document.Info.Author = options.Author;
+        }
+
+        // Set document description/subject metadata
+        if (!string.IsNullOrEmpty(options.Description))
+        {
+            document.Info.Subject = options.Description;
+        }
+
         var page = document.AddPage();
         page.Size = options.PageSize;
 

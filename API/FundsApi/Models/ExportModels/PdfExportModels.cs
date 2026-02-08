@@ -104,6 +104,16 @@ public class PdfExportOptions
     public string? DocumentTitle { get; set; }
 
     /// <summary>
+    /// Document author for PDF metadata.
+    /// </summary>
+    public string? Author { get; set; }
+
+    /// <summary>
+    /// Document description/subject for PDF metadata.
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
     /// Optional subtitle displayed below the title on the first page
     /// </summary>
     public string? Subtitle { get; set; }
