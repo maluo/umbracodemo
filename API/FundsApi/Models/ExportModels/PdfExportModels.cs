@@ -98,6 +98,12 @@ public class PdfExportOptions
     public string ReportTitle { get; set; } = "Report";
 
     /// <summary>
+    /// Document title for PDF metadata (shows in PDF viewer title bar).
+    /// If not specified, defaults to ReportTitle.
+    /// </summary>
+    public string? DocumentTitle { get; set; }
+
+    /// <summary>
     /// Optional subtitle displayed below the title on the first page
     /// </summary>
     public string? Subtitle { get; set; }

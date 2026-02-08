@@ -111,6 +111,12 @@ public class PdfExportService : IPdfExportService
 
         // Create PDF document
         var document = new PdfDocument();
+
+        // Set document title metadata (defaults to ReportTitle if DocumentTitle is not specified)
+        document.Info.Title = !string.IsNullOrEmpty(options.DocumentTitle)
+            ? options.DocumentTitle
+            : options.ReportTitle;
+
         var page = document.AddPage();
         page.Size = options.PageSize;
 
