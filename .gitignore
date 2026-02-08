@@ -482,3 +482,4 @@ appsettings-schema.*.json
 !.vscode/settings.json
 Umbraco13/AppData/download-tokens.json
 Umbraco13/AppData/*.json
+Umbraco13/AppData/download-tokens.json
