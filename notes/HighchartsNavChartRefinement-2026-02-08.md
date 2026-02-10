@@ -468,6 +468,50 @@ const pointPadding = isMobile ? 0.05 : 0.02; // 2.5x more space between bars on 
 - Works on all modern browsers
 - Graceful degradation on older browsers
 
+### Y-Axis Positioning Fix (Added 2026-02-09)
+
+**Overview**: Repositioned Y-axis to stay on the leftmost side of the chart for better visual consistency.
+
+**Problem**: The Y-axis was being shifted to the right by the `marginLeft` setting that was added to skip the label column. This created visual inconsistency as the Y-axis didn't align with the left edge of the chart container.
+
+**Solution**: Removed the `marginLeft` configuration from the chart, allowing the Y-axis to remain in its default leftmost position.
+
+**Implementation**:
+
+```javascript
+// Before: Y-axis was shifted by marginLeft
+const marginLeft = labelColumnWidth || 0;
+
+Highcharts.chart(container, {
+    chart: {
+        // ...
+        marginLeft: marginLeft  // This shifted the entire chart including Y-axis
+    }
+});
+
+// After: Y-axis stays on left
+Highcharts.chart(container, {
+    chart: {
+        // ...
+        // No marginLeft - Y-axis stays on left
+    }
+});
+```
+
+**Changes Made**:
+- Removed `marginLeft` calculation and usage
+- Y-axis now stays on leftmost side regardless of label column width
+- Bars are still correctly sized based on `tableColumnWidth`
+- `labelColumnWidth` parameter kept for backwards compatibility but no longer used
+
+**Benefits**:
+- Y-axis always on left edge for consistent appearance
+- Simplified chart layout
+- Better visual hierarchy
+- Easier to read price values
+
+**Note**: The chart no longer tries to align with table columns by skipping the label column. Instead, the Y-axis remains on the left edge, which is the standard and expected behavior for bar charts.
+
 ### Related Files
 
 - Original: `Umbraco13/Views/Shared/Components/HistoricalNavTable/Default.cshtml`
