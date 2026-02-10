@@ -423,6 +423,51 @@ function renderChart(paginatedNavs) {
 - Responsive to window resize
 - Automatic width calculation adapts to different screen sizes
 
+### Mobile Responsive Padding (Added 2026-02-09)
+
+**Overview**: Added mobile-aware padding configuration to improve visual separation between bar groups on small screens where space is limited.
+
+**Problem**: On mobile screens (< 768px width), the bars were too tight with minimal gaps between different date groups, making it difficult to distinguish between groups.
+
+**Solution**: Detect screen width and adjust padding dynamically:
+- **Mobile (< 768px)**: More generous padding for better visual separation
+- **Desktop (≥ 768px)**: Compact padding for efficient space usage
+
+**Implementation**:
+
+```javascript
+// Detect screen width for responsive padding
+const isMobile = window.innerWidth < 768; // Mobile breakpoint
+
+// Calculate padding based on screen size
+const groupPadding = isMobile ? 0.25 : 0.05; // 5x more space between groups on mobile
+const pointPadding = isMobile ? 0.05 : 0.02; // 2.5x more space between bars on mobile
+```
+
+**Padding Values Explained**:
+
+- **groupPadding**: Space between different date groups (x-axis categories)
+  - Mobile: 0.25 (25% of available space)
+  - Desktop: 0.05 (5% of available space)
+  - **Result**: 5x more space between date groups on mobile
+
+- **pointPadding**: Space between bars within a group (NAV vs Market Price)
+  - Mobile: 0.05 (5% of category width)
+  - Desktop: 0.02 (2% of category width)
+  - **Result**: 2.5x more space between paired bars on mobile
+
+**Benefits**:
+- Better visual separation on mobile screens
+- Easier to distinguish between different date groups
+- Maintains compact layout on desktop screens
+- Automatic adjustment based on screen width
+- No manual configuration needed
+
+**Browser Support**:
+- Uses standard `window.innerWidth` API
+- Works on all modern browsers
+- Graceful degradation on older browsers
+
 ### Related Files
 
 - Original: `Umbraco13/Views/Shared/Components/HistoricalNavTable/Default.cshtml`
