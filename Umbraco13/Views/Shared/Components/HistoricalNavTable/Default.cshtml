@@ -33,30 +33,12 @@
             </div>
         </div>
 
-        <!-- SVG Composite Bar Chart -->
+        <!-- Highcharts Bar Chart -->
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="card-title text-center mb-4">NAV Price vs Market Price Chart</h5>
-                <div id="nav-chart-container" style="width: 100%; overflow-x: auto; position: relative;">
-                    <svg id="nav-chart" width="100%" height="350" preserveAspectRatio="none" style="background-color: #f8f9fa; border-radius: 8px; min-width: 600px; display: block;">
-                        <!-- Chart will be rendered here by JavaScript -->
-                    </svg>
-                    <div id="chart-tooltip"></div>
-                </div>
-                <!-- Legend -->
-                <div class="text-center mt-3">
-                    <span class="me-4">
-                        <svg width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 5px;">
-                            <rect width="16" height="16" fill="#3b82f6" rx="2"/>
-                        </svg>
-                        NAV Price
-                    </span>
-                    <span>
-                        <svg width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 5px;">
-                            <rect width="16" height="16" fill="#22c55e" rx="2"/>
-                        </svg>
-                        Market Price
-                    </span>
+                <div id="nav-chart-container" style="width: 100%; min-width: 600px;">
+                    <div id="nav-chart" style="height: 350px;"></div>
                 </div>
             </div>
         </div>
@@ -124,295 +106,167 @@
     margin-left: auto;
     margin-right: 20px;
 }
-
-/* Chart styles */
-.chart-bar {
-    transition: opacity 0.2s ease;
-    cursor: pointer;
-}
-
-.chart-bar:hover {
-    opacity: 0.7;
-}
-
-#chart-tooltip {
-    position: absolute;
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 12px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    z-index: 1000;
-    white-space: nowrap;
-}
-
-#chart-tooltip.show {
-    opacity: 1;
-}
 </style>
+
+@* Highcharts 5.0.7 CDN *@
+<script src="https://code.highcharts.com/5.0.7/highcharts.js"></script>
+<script src="https://code.highcharts.com/5.0.7/modules/exporting.js"></script>
 
 <script>
 /**
- * Generic Column-Aligned Bar Chart Generator
- * Creates SVG bar charts that align with table columns
- *
- * @@param {Object} options - Chart configuration options
- * @@param {string} options.containerId - ID of the container element
- * @@param {Array} options.data - Array of data objects (one per column)
- * @@param {Array} options.series - Array of series definitions [{key, label, color, format}]
- * @@param {number} options.labelColumnWidth - Width of the label column in pixels
- * @@param {number} options.height - Chart height in pixels
- * @@param {string} options.title - Chart title
- * @@param {Object} options.yAxis - Y axis configuration {title, labelFormatter}
- * @@param {boolean} options.showGuides - Show vertical alignment guides
- * @@param {boolean} options.showBoundaries - Show column boundary markers
- *
- * @@example
- * generateColumnBarChart({
- *     containerId: 'nav-chart',
- *     data: [{NavPrice: 50, MarketPrice: 49.5, NavDate: '2025-01-01'}, ...],
- *     series: [
- *         {key: 'NavPrice', label: 'NAV Price', color: '#3b82f6', format: 'currency'},
- *         {key: 'MarketPrice', label: 'Market Price', color: '#22c55e', format: 'currency'}
- *     ],
- *     labelColumnWidth: 150,
- *     height: 350,
- *     title: 'NAV Price vs Market Price'
- * });
+ * Render Highcharts bar chart for NAV history
+ * @param {Array} data - Array of historical nav objects
+ * @param {string} containerId - ID of chart container
  */
-function generateColumnBarChart(options) {
-    const {
-        containerId,
-        data = [],
-        series = [],
-        labelColumnWidth = 150,
-        height = 350,
-        title = '',
-        yAxis = { title: 'Price', labelFormatter: (v) => '$' + v.toFixed(2) },
-        showGuides = true,
-        showBoundaries = true
-    } = options;
-
+function renderHighchartsBarChart(data, containerId) {
     const container = document.getElementById(containerId);
-    if (!container || !data.length || !series.length) {
+    if (!container || !data || data.length === 0) {
         if (container) {
-            container.innerHTML = `<svg width="100%" height="${height}" style="background-color: #f8f9fa; border-radius: 8px;">
-                <text x="50%" y="50%" text-anchor="middle" fill="#6c757d">No data available</text>
-            </svg>`;
+            container.innerHTML = '<div class="text-center text-muted p-5">No data available</div>';
         }
         return;
     }
 
-    // Get container width for full expansion
-    const containerWidth = container.clientWidth || 1200;
-
-    // Calculate dimensions
-    const totalWidth = containerWidth;
-    const availableWidth = totalWidth - labelColumnWidth - 20;
-    const columnWidth = availableWidth / data.length;
-
-    // Chart padding
-    const chartLeft = labelColumnWidth;
-    const padding = { top: 40, right: 20, bottom: 70, left: chartLeft };
-    const chartWidth = totalWidth - chartLeft - padding.right;
-    const chartHeight = height - padding.top - padding.bottom;
-
-    // Find min and max values for Y axis scale
-    const allValues = [];
-    data.forEach(item => {
-        series.forEach(s => {
-            const value = item[s.key];
-            if (value !== null && value !== undefined) {
-                allValues.push(value);
-            }
-        });
-    });
-
-    if (allValues.length === 0) {
-        container.innerHTML = `<svg width="100%" height="${height}" style="background-color: #f8f9fa; border-radius: 8px;">
-            <text x="50%" y="50%" text-anchor="middle" fill="#6c757d">No valid data available</text>
-        </svg>`;
-        return;
-    }
-
-    const minValue = Math.min(...allValues) * 0.95;
-    const maxValue = Math.max(...allValues) * 1.05;
-    const valueRange = maxValue - minValue;
-
-    // Calculate bar dimensions based on column width
-    const barWidth = Math.min(50, columnWidth * 0.35);
-    const barGap = Math.min(12, columnWidth * 0.08);
-
-    // Create SVG namespace
-    const ns = 'http://www.w3.org/2000/svg';
-
-    // Helper functions
-    const valueToY = (value) => {
-        return padding.top + chartHeight - ((value - minValue) / valueRange) * chartHeight;
-    };
-
-    const indexToColumnCenter = (index) => {
-        return chartLeft + (index * columnWidth) + (columnWidth / 2);
-    };
-
-    const formatDate = (dateStr) => {
-        const date = new Date(dateStr);
+    // Prepare data for Highcharts
+    const categories = data.map(item => {
+        const date = new Date(item.NavDate);
         return date.toLocaleDateString('en-GB');
-    };
-
-    const formatValue = (value, format) => {
-        switch (format) {
-            case 'currency':
-                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-            case 'percent':
-                return value.toFixed(2) + '%';
-            case 'number':
-                return value.toFixed(2);
-            default:
-                return value;
-        }
-    };
-
-    // Build SVG content
-    let svgContent = '';
-
-    // Y axis grid lines
-    const gridLineCount = 5;
-    for (let i = 0; i <= gridLineCount; i++) {
-        const value = minValue + (valueRange * i / gridLineCount);
-        const y = valueToY(value);
-        const label = yAxis.labelFormatter(value);
-
-        svgContent += `<line x1="${chartLeft}" y1="${y}" x2="${totalWidth - padding.right}" y2="${y}" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4"/>`;
-        svgContent += `<text x="${chartLeft - 10}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6c757d">${label}</text>`;
-    }
-
-    // Y axis line
-    svgContent += `<line x1="${chartLeft}" y1="${padding.top}" x2="${chartLeft}" y2="${height - padding.bottom}" stroke="#495057" stroke-width="2"/>`;
-
-    // Vertical divider at label column boundary
-    svgContent += `<line x1="${labelColumnWidth}" y1="${padding.top - 10}" x2="${labelColumnWidth}" y2="${height - padding.bottom}" stroke="#dee2e6" stroke-width="2"/>`;
-
-    // Column center alignment guides
-    if (showGuides) {
-        data.forEach((item, index) => {
-            const groupCenter = indexToColumnCenter(index);
-            svgContent += `<line x1="${groupCenter}" y1="${padding.top}" x2="${groupCenter}" y2="${height - padding.bottom}" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3,3" opacity="0.15"/>`;
-        });
-    }
-
-    // Column boundary markers
-    if (showBoundaries) {
-        data.forEach((item, index) => {
-            const colRightEdge = chartLeft + ((index + 1) * columnWidth);
-            svgContent += `<line x1="${colRightEdge}" y1="${padding.top}" x2="${colRightEdge}" y2="${height - padding.bottom}" stroke="#e9ecef" stroke-width="1" stroke-dasharray="2,2"/>`;
-        });
-    }
-
-    // Draw bars for each column
-    data.forEach((item, colIndex) => {
-        const columnCenter = indexToColumnCenter(colIndex);
-        let barOffset = 0;
-
-        series.forEach((s, seriesIndex) => {
-            const value = item[s.key];
-            if (value === null || value === undefined) return;
-
-            const barY = valueToY(value);
-            const barHeight = padding.top + chartHeight - barY;
-            const barX = columnCenter - (barWidth * series.length / 2) + barOffset;
-            const barColor = s.color || (seriesIndex === 0 ? '#3b82f6' : '#22c55e');
-
-            svgContent += `<rect class="chart-bar" x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}" fill="${barColor}" rx="3" data-value="${value}" data-type="${s.label}" data-series="${seriesIndex}"/>`;
-            barOffset += barWidth + barGap;
-        });
     });
 
-    // X axis labels (get first date key or use index)
-    const dateKey = data[0].NavDate ? 'NavDate' : (data[0].Date ? 'Date' : null);
-    if (dateKey) {
-        data.forEach((item, index) => {
-            const columnCenter = indexToColumnCenter(index);
-            const dateLabel = formatDate(item[dateKey]);
-            svgContent += `<text x="${columnCenter}" y="${height - padding.bottom + 25}" text-anchor="middle" font-size="12" font-weight="500" fill="#495057">${dateLabel}</text>`;
-        });
-    }
+    const navPrices = data.map(item => item.NavPrice);
+    const marketPrices = data.map(item => item.MarketPrice);
 
-    // X axis line
-    svgContent += `<line x1="${chartLeft}" y1="${height - padding.bottom}" x2="${totalWidth - padding.right}" y2="${height - padding.bottom}" stroke="#495057" stroke-width="2"/>`;
-
-    // Y axis title (rotated)
-    svgContent += `<text x="${-height / 2}" y="15" transform="rotate(-90)" text-anchor="middle" font-size="12" font-weight="bold" fill="#495057">${yAxis.title}</text>`;
-
-    // Create SVG element
-    const svg = document.createElementNS(ns, 'svg');
-    svg.setAttribute('width', '100%');
-    svg.setAttribute('height', height);
-    svg.setAttribute('viewBox', `0 0 ${totalWidth} ${height}`);
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.style.backgroundColor = '#f8f9fa';
-    svg.style.borderRadius = '8px';
-    svg.style.display = 'block';
-    svg.innerHTML = svgContent;
-
-    // Clear container and append SVG
-    container.innerHTML = '';
-    container.appendChild(svg);
-
-    // Setup tooltips
-    setupChartTooltips(container);
-
-    // Return SVG element for further manipulation
-    return svg;
-}
-
-/**
- * Setup tooltip functionality for chart bars
- */
-function setupChartTooltips(container) {
-    // Find or create tooltip element
-    let tooltip = document.getElementById('chart-tooltip');
-    if (!tooltip) {
-        tooltip = document.createElement('div');
-        tooltip.id = 'chart-tooltip';
-        tooltip.style.cssText = 'position: absolute; background-color: rgba(0, 0, 0, 0.8); color: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.2s ease; z-index: 1000; white-space: nowrap;';
-        // Append to parent container (not the chart container) so it survives re-renders
-        if (container.parentElement) {
-            container.parentElement.appendChild(tooltip);
-        } else {
-            container.appendChild(tooltip);
+    // Create chart
+    Highcharts.chart(container, {
+        chart: {
+            type: 'column',
+            style: {
+                fontFamily: 'Arial, sans-serif'
+            },
+            backgroundColor: '#f8f9fa',
+            borderRadius: 8
+        },
+        title: {
+            text: null
+        },
+        xAxis: {
+            categories: categories,
+            title: {
+                text: 'Date',
+                style: {
+                    fontWeight: 'bold',
+                    fontSize: '12px'
+                }
+            },
+            labels: {
+                style: {
+                    fontSize: '12px',
+                    fontWeight: '500'
+                }
+            }
+        },
+        yAxis: {
+            title: {
+                text: 'Price (USD)',
+                style: {
+                    fontWeight: 'bold',
+                    fontSize: '12px'
+                }
+            },
+            labels: {
+                formatter: function() {
+                    return '$' + this.value.toFixed(2);
+                },
+                style: {
+                    fontSize: '11px'
+                }
+            },
+            gridLineDashStyle: 'Dash',
+            gridLineWidth: 1,
+            gridLineColor: '#e0e0e0'
+        },
+        tooltip: {
+            shared: true,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            style: {
+                color: '#FFFFFF',
+                fontSize: '12px'
+            },
+            formatter: function() {
+                let tooltip = '<strong>' + this.x + '</strong><br/>';
+                this.points.forEach(point => {
+                    const color = point.series.color;
+                    const value = new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD'
+                    }).format(point.y);
+                    tooltip += '<span style="color: ' + color + '">●</span> ' +
+                                point.series.name + ': <strong>' + value + '</strong><br/>';
+                });
+                return tooltip;
+            },
+            useHTML: true
+        },
+        legend: {
+            enabled: true,
+            align: 'center',
+            verticalAlign: 'bottom',
+            y: 10,
+            floating: false,
+            backgroundColor: 'transparent',
+            itemStyle: {
+                fontWeight: 'normal',
+                fontSize: '12px'
+            }
+        },
+        plotOptions: {
+            column: {
+                grouping: true,
+                shadow: false,
+                borderWidth: 0,
+                borderRadius: 3,
+                pointWidth: 25,
+                groupPadding: 0.1,
+                pointPadding: 0.05,
+                dataLabels: {
+                    enabled: false
+                },
+                states: {
+                    hover: {
+                        brightness: 0.1,
+                        borderWidth: 0
+                    }
+                },
+                cursor: 'pointer',
+                events: {
+                    legendItemClick: function() {
+                        return false; // Prevent hiding series
+                    }
+                }
+            }
+        },
+        series: [{
+            name: 'NAV Price',
+            data: navPrices,
+            color: '#3b82f6',
+            borderRadius: 3
+        }, {
+            name: 'Market Price',
+            data: marketPrices,
+            color: '#22c55e',
+            borderRadius: 3
+        }],
+        credits: {
+            enabled: false
+        },
+        exporting: {
+            enabled: false // Disable built-in export buttons
         }
-    }
-
-    const bars = container.querySelectorAll('.chart-bar');
-    bars.forEach(bar => {
-        bar.addEventListener('mouseenter', function(e) {
-            const value = this.getAttribute('data-value');
-            const type = this.getAttribute('data-type');
-            const color = this.getAttribute('fill');
-            tooltip.innerHTML = `<strong style="color: ${color}">${type}</strong><br>${value}`;
-            tooltip.classList.add('show');
-            tooltip.style.opacity = '1';
-        });
-
-        bar.addEventListener('mousemove', function(e) {
-            const rect = container.getBoundingClientRect();
-            tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
-            tooltip.style.top = (e.clientY - rect.top - 40) + 'px';
-        });
-
-        bar.addEventListener('mouseleave', function() {
-            tooltip.style.opacity = '0';
-        });
     });
 }
 
-// Make functions globally accessible
-window.generateColumnBarChart = generateColumnBarChart;
-window.setupChartTooltips = setupChartTooltips;
+// Make function globally accessible
+window.renderHighchartsBarChart = renderHighchartsBarChart;
 
 (function() {
     // Data and state
@@ -469,34 +323,9 @@ window.setupChartTooltips = setupChartTooltips;
         }
     }
 
-    // Render SVG composite bar chart - uses generic chart generator
+    // Render chart using Highcharts
     function renderChart(paginatedNavs) {
-        const svg = document.getElementById('nav-chart');
-        if (!svg) return;
-
-        if (paginatedNavs.length === 0) {
-            svg.setAttribute('viewBox', '0 0 600 350');
-            svg.innerHTML = '<text x="300" y="175" text-anchor="middle" fill="#6c757d">No data available</text>';
-            return;
-        }
-
-        generateColumnBarChart({
-            containerId: 'nav-chart',
-            data: paginatedNavs,
-            series: [
-                { key: 'NavPrice', label: 'NAV Price', color: '#3b82f6', format: 'currency' },
-                { key: 'MarketPrice', label: 'Market Price', color: '#22c55e', format: 'currency' }
-            ],
-            labelColumnWidth: 150,
-            height: 350,
-            title: 'NAV Price vs Market Price',
-            yAxis: {
-                title: 'Price (USD)',
-                labelFormatter: (v) => '$' + v.toFixed(2)
-            },
-            showGuides: true,
-            showBoundaries: true
-        });
+        renderHighchartsBarChart(paginatedNavs, 'nav-chart');
     }
 
     // Render table header (dates as columns)
@@ -693,13 +522,7 @@ window.setupChartTooltips = setupChartTooltips;
     renderTableBody();
     updateSortButton();
 
-    // Handle window resize to adjust chart width
-    let resizeTimeout;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(function() {
-            renderTableBody(); // Re-render to update chart width
-        }, 250);
-    });
+    // Handle window resize to adjust chart width (Highcharts handles this automatically)
+    // No manual resize handling needed with Highcharts
 })();
 </script>
