@@ -139,9 +139,9 @@ function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColu
     const marketPrices = data.map(item => item.MarketPrice !== null && item.MarketPrice !== undefined ? item.MarketPrice : null);
 
     // Calculate bar width based on table column width
-    // Each column has 2 bars (NAV + Market), so each bar gets (columnWidth / 2)
+    // Each group has 2 bars (NAV + Market), and the entire group should match the table column width
+    // With groupPadding and pointPadding, we need to adjust the bar width
     const columnWidth = tableColumnWidth || 150; // Default 150px if not provided
-    const barWidth = Math.floor(columnWidth / 2) - 8; // Leave small gap between bars
 
     // Detect screen width for responsive padding
     const isMobile = window.innerWidth < 768; // Mobile breakpoint
@@ -151,6 +151,12 @@ function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColu
     // For desktop: minimal padding for compact display
     const groupPadding = isMobile ? 0.25 : 0.05; // More space between groups on mobile
     const pointPadding = isMobile ? 0.05 : 0.02; // Slightly more space between bars on mobile
+
+    // Calculate bar width so the entire group (2 bars) matches table column width
+    // Each group = 2 bars + padding between them
+    // Available width per bar = (columnWidth * (1 - groupPadding)) / 2
+    const availableWidth = columnWidth * (1 - groupPadding);
+    const barWidth = Math.floor(availableWidth / 2); // Each bar gets half the available width
 
     // Create chart
     Highcharts.chart(container, {
