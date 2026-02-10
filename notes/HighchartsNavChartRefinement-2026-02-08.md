@@ -228,10 +228,10 @@ window.addEventListener('resize', function() {
 
 ### Commit Created
 
-**Commit**: `docs: add Highcharts 5.0.7 implementation for NAV history chart`
-- **Hash**: 9855322
+**Commit**: `feat: align Highcharts bar centers with table column centers`
+- **Hash**: 5203b3f (amended from ba16f17)
 - **Branch**: feat/pdf-document-title-option
-- **Files**: 2 new files
+- **Files**: 1 modified file
 
 ### Summary of Changes
 
@@ -349,6 +349,79 @@ window.addEventListener('resize', function() {
 - ✅ Colors match original design
 - ✅ Legend displays correctly
 - ✅ Mobile-friendly
+- ✅ Bar centers align with table column centers
+- ✅ Chart skips label column with left margin
+
+### Chart Alignment Feature (Added 2026-02-09)
+
+**Overview**: Added dynamic chart alignment to ensure bar centers match table column centers, with left margin to skip the non-data label column.
+
+**Implementation**:
+
+1. **Dynamic Width Measurement**:
+   - Measures label column width from the first table cell
+   - Measures data column width from the second table cell
+   - Uses `setTimeout(50ms)` to ensure DOM is fully rendered
+
+2. **Chart Left Margin**:
+   - Calculates `marginLeft` based on `labelColumnWidth`
+   - Adds left margin to Highcharts chart configuration
+   - Ensures chart bars align with table data columns (not label column)
+
+3. **Bar Width Calculation**:
+   - Each table column has 2 bars (NAV + Market)
+   - Bar width = `(tableColumnWidth / 2) - 8` pixels
+   - Minimum bar width of 10px to ensure visibility
+
+4. **Resize Handler**:
+   - Added window resize listener to re-render chart
+   - Uses 250ms debounce to avoid excessive re-renders
+   - Re-calculates column widths on resize
+
+**Code Changes**:
+
+```javascript
+// Updated function signature
+function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColumnWidth) {
+    const marginLeft = labelColumnWidth || 0;
+
+    Highcharts.chart(container, {
+        chart: {
+            // ...
+            marginLeft: marginLeft  // Skip label column
+        },
+        // ...
+    });
+}
+
+// Width measurement in renderChart
+function renderChart(paginatedNavs) {
+    setTimeout(function() {
+        const table = document.getElementById('historical-nav-table');
+        let tableColumnWidth = 120;
+        let labelColumnWidth = 0;
+
+        if (table) {
+            const firstRow = table.querySelector('tbody tr');
+            if (firstRow) {
+                const labelCell = firstRow.cells[0];
+                if (labelCell) labelColumnWidth = labelCell.offsetWidth;
+
+                const firstDataCell = firstRow.cells[1];
+                if (firstDataCell) tableColumnWidth = firstDataCell.offsetWidth;
+            }
+        }
+
+        renderHighchartsBarChart(paginatedNavs, 'nav-chart', tableColumnWidth, labelColumnWidth);
+    }, 50);
+}
+```
+
+**Benefits**:
+- Chart bars align perfectly with table data columns
+- Label column (non-data) is skipped with left margin
+- Responsive to window resize
+- Automatic width calculation adapts to different screen sizes
 
 ### Related Files
 
