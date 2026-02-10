@@ -631,6 +631,48 @@ Chart:  [Y-axis] | [bars]  |  [bars] |  [bars] |
 - Space between groups: ~50px (50% of column)
 - Result: Highly separated groups for small screens
 
+### Left Margin Restoration for Label Column Alignment (Added 2026-02-09)
+
+**Overview**: Restored left margin to the chart to create space between the Y-axis and first bar group that matches the table's label column width.
+
+**Problem**: Without left margin, the Y-axis was positioned at the left edge of the chart container, creating a visual mismatch with the table below it which has a label column on the left side.
+
+**Solution**: Re-added the `marginLeft` configuration using the `labelColumnWidth` parameter that was being measured but not used.
+
+**Implementation**:
+
+```javascript
+// Calculate left margin to match label column width
+const marginLeft = labelColumnWidth || 0;
+
+Highcharts.chart(container, {
+    chart: {
+        // ...
+        marginLeft: marginLeft  // Space between Y-axis and first bar group
+    }
+});
+```
+
+**Visual Alignment**:
+```
+Table:  [Label] |  Col1  |  Col2  |
+Chart:  [Y-axis] | space | [bars] | [bars] |
+        <-width-> | <-width->
+
+Where:
+- Label column width = ~150px (typical)
+- Chart left margin = ~150px (matches label column)
+- First bar group starts at the same horizontal position as Col1
+```
+
+**Benefits**:
+- Chart aligns visually with the table structure
+- Y-axis and first bar group align with table columns
+- Improved visual consistency across the component
+- Creates professional, polished appearance
+
+**Note**: The `labelColumnWidth` parameter is now actively used again (after being unused in the previous iteration). The width is dynamically measured from the table's first row label cell.
+
 ### Related Files
 
 - Original: `Umbraco13/Views/Shared/Components/HistoricalNavTable/Default.cshtml`
