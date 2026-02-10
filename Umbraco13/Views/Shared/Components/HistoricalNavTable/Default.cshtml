@@ -142,7 +142,15 @@ function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColu
     // Each column has 2 bars (NAV + Market), so each bar gets (columnWidth / 2)
     const columnWidth = tableColumnWidth || 150; // Default 150px if not provided
     const barWidth = Math.floor(columnWidth / 2) - 8; // Leave small gap between bars
-    const groupPadding = 0.05; // Minimal padding between groups
+
+    // Detect screen width for responsive padding
+    const isMobile = window.innerWidth < 768; // Mobile breakpoint
+
+    // Calculate padding based on screen size
+    // For mobile: more group padding to separate date groups visually
+    // For desktop: minimal padding for compact display
+    const groupPadding = isMobile ? 0.25 : 0.05; // More space between groups on mobile
+    const pointPadding = isMobile ? 0.05 : 0.02; // Slightly more space between bars on mobile
 
     // Calculate left margin to skip the label column
     const marginLeft = labelColumnWidth || 0;
@@ -253,7 +261,7 @@ function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColu
                 borderRadius: 3,
                 pointWidth: Math.max(10, barWidth), // Min 10px to ensure visibility
                 groupPadding: groupPadding,
-                pointPadding: 0.02, // Minimal padding between bars in a group
+                pointPadding: pointPadding, // Responsive padding between bars in a group
                 dataLabels: {
                     enabled: false
                 },
