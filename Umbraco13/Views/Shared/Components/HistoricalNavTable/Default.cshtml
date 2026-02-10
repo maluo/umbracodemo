@@ -127,14 +127,14 @@ function renderHighchartsBarChart(data, containerId) {
         return;
     }
 
-    // Prepare data for Highcharts
+    // Prepare data for Highcharts (filter out null/undefined values)
     const categories = data.map(item => {
         const date = new Date(item.NavDate);
         return date.toLocaleDateString('en-GB');
     });
 
-    const navPrices = data.map(item => item.NavPrice);
-    const marketPrices = data.map(item => item.MarketPrice);
+    const navPrices = data.map(item => item.NavPrice !== null && item.NavPrice !== undefined ? item.NavPrice : null);
+    const marketPrices = data.map(item => item.MarketPrice !== null && item.MarketPrice !== undefined ? item.MarketPrice : null);
 
     // Create chart
     Highcharts.chart(container, {
@@ -175,6 +175,9 @@ function renderHighchartsBarChart(data, containerId) {
             },
             labels: {
                 formatter: function() {
+                    if (this.value === null || this.value === undefined) {
+                        return 'N/A';
+                    }
                     return '$' + this.value.toFixed(2);
                 },
                 style: {
@@ -194,15 +197,20 @@ function renderHighchartsBarChart(data, containerId) {
             },
             formatter: function() {
                 let tooltip = '<strong>' + this.x + '</strong><br/>';
-                this.points.forEach(point => {
-                    const color = point.series.color;
-                    const value = new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'USD'
-                    }).format(point.y);
-                    tooltip += '<span style="color: ' + color + '">●</span> ' +
-                                point.series.name + ': <strong>' + value + '</strong><br/>';
-                });
+                if (this.points && this.points.length > 0) {
+                    this.points.forEach(point => {
+                        if (point.y === null || point.y === undefined) {
+                            return;
+                        }
+                        const color = point.series.color;
+                        const value = new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD'
+                        }).format(point.y);
+                        tooltip += '<span style="color: ' + color + '">●</span> ' +
+                                    point.series.name + ': <strong>' + value + '</strong><br/>';
+                    });
+                }
                 return tooltip;
             },
             useHTML: true
