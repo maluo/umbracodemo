@@ -157,6 +157,10 @@ function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColu
     // Each bar is 25-30% of column width, so 2 bars = 50-60% of column width
     // Remaining 40-50% becomes space between groups
 
+    // Calculate left margin to match label column width
+    // This creates space between Y-axis and first bar group equal to the label column
+    const marginLeft = labelColumnWidth || 0;
+
     // Create chart
     Highcharts.chart(container, {
         chart: {
@@ -168,7 +172,10 @@ function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColu
             borderRadius: 8,
             // Match table width
             width: null,
-            height: 350
+            height: 350,
+            // Add left margin to match label column width
+            // This creates space between Y-axis and first bar group
+            marginLeft: marginLeft
         },
         title: {
             text: null
