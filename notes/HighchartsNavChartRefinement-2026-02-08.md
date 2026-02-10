@@ -562,6 +562,75 @@ Chart:  [Y-axis] | ~120px | ~120px | ~120px |
 - Each bar still gets proportional width: `(columnWidth * 0.75) / 2`
 - Maintains visual consistency across screen sizes
 
+### Thinner Bars with Enhanced Group Spacing (Added 2026-02-09)
+
+**Overview**: Redesigned bar layout to make bars thinner with increased space between groups for better visual breathing room.
+
+**Problem**: The previous calculation made bars fill most of the column width, making the chart look crowded with insufficient separation between date groups.
+
+**Solution**: Changed approach from "fill the space" to "use a percentage" for bar width, combined with increased group padding.
+
+**Implementation**:
+
+```javascript
+// Before: Bars filled most of the available space
+const availableWidth = columnWidth * (1 - groupPadding);
+const barWidth = Math.floor(availableWidth / 2);
+const groupPadding = isMobile ? 0.25 : 0.05;
+
+// After: Bars use fixed percentage, more space between groups
+const barWidth = isMobile ? Math.floor(columnWidth * 0.25) : Math.floor(columnWidth * 0.30);
+const groupPadding = isMobile ? 0.30 : 0.20;
+```
+
+**New Configuration**:
+
+1. **Bar Width** (Fixed percentage of column width):
+   - Desktop: Each bar = 30% of column width
+   - Mobile: Each bar = 25% of column width
+   - Total group width = 50-60% of column space
+
+2. **Group Padding** (Space between groups):
+   - Desktop: 0.20 (20% of available space)
+   - Mobile: 0.30 (30% of available space)
+   - Increased from 0.05/0.25 to 0.20/0.30
+
+3. **Space Distribution**:
+   ```
+   Column:  |<---------- 120px --------->|
+   Group:    |<-36px->|<-gap->|<-36px->|
+              (30%)   (40%)    (30%)
+   ```
+
+**Visual Layout**:
+```
+Table:  [Label] |  120px  |  120px  |  120px  |
+Chart:  [Y-axis] | [bars]  |  [bars] |  [bars] |
+                  36px+36  36px+36   36px+36
+                  with gaps  with gaps with gaps
+```
+
+**Benefits**:
+- Thinner, more elegant bars
+- Clearer visual separation between date groups
+- Less crowded appearance
+- Better focus on individual data points
+- Maintains readability while improving aesthetics
+
+**Space Calculation** (Desktop):
+- Column width: 120px
+- Each bar: 36px (30% of 120px)
+- Two bars: 72px (60% total)
+- Space between groups: ~48px (40% of column)
+- Result: Clean, spacious layout
+
+**Space Calculation** (Mobile):
+- Column width: ~100px (typical mobile)
+- Each bar: 25px (25% of 100px)
+- Two bars: 50px (50% total)
+- Space between groups: ~50px (50% of column)
+- Result: Highly separated groups for small screens
+
 ### Related Files
 
 - Original: `Umbraco13/Views/Shared/Components/HistoricalNavTable/Default.cshtml`
