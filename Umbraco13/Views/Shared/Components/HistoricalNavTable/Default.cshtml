@@ -266,7 +266,7 @@ function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColu
                 shadow: false,
                 borderWidth: 0,
                 borderRadius: 3,
-                pointWidth: Math.max(10, barWidth), // Min 10px to ensure visibility
+                pointWidth: Math.max(10, barWidth), // Fixed width ensures all bars are equal
                 groupPadding: groupPadding,
                 pointPadding: pointPadding, // Responsive padding between bars in a group
                 dataLabels: {
