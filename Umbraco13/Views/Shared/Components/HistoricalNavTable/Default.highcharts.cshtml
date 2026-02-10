@@ -1,0 +1,528 @@
+@model Umbraco13.Models.FundHistoricalNavViewModel
+
+@{
+    var historicalNavsData = System.Text.Json.JsonSerializer.Serialize(Model.HistoricalNavs);
+}
+
+<div id="historical-nav-container" style="margin: 40px auto 0 auto; width: 100%; max-width: 100%;">
+    <h3 style="margin-bottom: 20px;">Historical NAV Values - @Model.FundName (@Model.TickerCode)</h3>
+
+    @if (Model.HistoricalNavs != null && Model.HistoricalNavs.Count > 0)
+    {
+        <!-- Download Buttons -->
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <div style="margin-right: auto;">
+                <button id="sort-toggle-btn" class="btn btn-sm btn-secondary" type="button" style="margin-right: 10px;">
+                    Sort: Newest First <span id="sort-indicator">↓</span>
+                </button>
+            </div>
+            <div>
+                <a href="#" id="download-hist-pdf" class="btn btn-danger" style="text-decoration: none; margin-right: 10px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf" viewBox="0 0 16 16" style="margin-right: 5px; vertical-align: text-bottom;">
+                        <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                    </svg>
+                    Download PDF
+                </a>
+                <a href="#" id="download-hist-excel" class="btn btn-success" style="text-decoration: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel" viewBox="0 0 16 16" style="margin-right: 5px; vertical-align: text-bottom;">
+                        <path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.78l2.116 2.54a.5.5 0 0 0 .768-.641L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.22 5.884 6.68z"/>
+                        <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+                    </svg>
+                    Download Excel
+                </a>
+            </div>
+        </div>
+
+        <!-- Highcharts Bar Chart -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title text-center mb-4">NAV Price vs Market Price Chart</h5>
+                <div id="nav-chart-container" style="width: 100%; min-width: 600px;">
+                    <div id="nav-chart" style="height: 350px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover" id="historical-nav-table">
+                <thead class="table-light" id="historical-nav-table-head">
+                    <!-- Date columns will be populated by JavaScript -->
+                </thead>
+                <tbody id="historical-nav-table-body">
+                    <!-- Field rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                <span id="hist-pagination-info">Showing 1-5 of @Model.TotalItems dates</span>
+            </div>
+            <nav aria-label="Page navigation">
+                <ul class="pagination mb-0" id="hist-pagination-controls">
+                    <!-- Pagination buttons will be populated by JavaScript -->
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Page Size Selector -->
+        <div class="mt-3 text-end">
+            <label>Show
+                <select id="hist-page-size-select" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                    <option value="3">3</option>
+                    <option value="5" selected>5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                </select>
+                dates per page
+            </label>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">No historical NAV data available for this fund.</p>
+    }
+</div>
+
+<style>
+.pagination .page-link {
+    cursor: pointer;
+}
+
+.pagination .page-item.disabled .page-link {
+    cursor: not-allowed;
+}
+
+.positive-change {
+    color: green;
+}
+
+.negative-change {
+    color: red;
+}
+
+.sort-toggle-btn {
+    margin-left: auto;
+    margin-right: 20px;
+}
+</style>
+
+@* Highcharts 5.0.7 CDN *@
+<script src="https://code.highcharts.com/5.0.7/highcharts.js"></script>
+<script src="https://code.highcharts.com/5.0.7/modules/exporting.js"></script>
+
+<script>
+/**
+ * Render Highcharts bar chart for NAV history
+ * @param {Array} data - Array of historical nav objects
+ * @param {string} containerId - ID of chart container
+ */
+function renderHighchartsBarChart(data, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container || !data || data.length === 0) {
+        if (container) {
+            container.innerHTML = '<div class="text-center text-muted p-5">No data available</div>';
+        }
+        return;
+    }
+
+    // Prepare data for Highcharts
+    const categories = data.map(item => {
+        const date = new Date(item.NavDate);
+        return date.toLocaleDateString('en-GB');
+    });
+
+    const navPrices = data.map(item => item.NavPrice);
+    const marketPrices = data.map(item => item.MarketPrice);
+
+    // Create chart
+    Highcharts.chart(container, {
+        chart: {
+            type: 'column',
+            style: {
+                fontFamily: 'Arial, sans-serif'
+            },
+            backgroundColor: '#f8f9fa',
+            borderRadius: 8
+        },
+        title: {
+            text: null
+        },
+        xAxis: {
+            categories: categories,
+            title: {
+                text: 'Date',
+                style: {
+                    fontWeight: 'bold',
+                    fontSize: '12px'
+                }
+            },
+            labels: {
+                style: {
+                    fontSize: '12px',
+                    fontWeight: '500'
+                }
+            }
+        },
+        yAxis: {
+            title: {
+                text: 'Price (USD)',
+                style: {
+                    fontWeight: 'bold',
+                    fontSize: '12px'
+                }
+            },
+            labels: {
+                formatter: function() {
+                    return '$' + this.value.toFixed(2);
+                },
+                style: {
+                    fontSize: '11px'
+                }
+            },
+            gridLineDashStyle: 'Dash',
+            gridLineWidth: 1,
+            gridLineColor: '#e0e0e0'
+        },
+        tooltip: {
+            shared: true,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            style: {
+                color: '#FFFFFF',
+                fontSize: '12px'
+            },
+            formatter: function() {
+                let tooltip = '<strong>' + this.x + '</strong><br/>';
+                this.points.forEach(point => {
+                    const color = point.series.color;
+                    const value = new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD'
+                    }).format(point.y);
+                    tooltip += '<span style="color: ' + color + '">●</span> ' +
+                                point.series.name + ': <strong>' + value + '</strong><br/>';
+                });
+                return tooltip;
+            },
+            useHTML: true
+        },
+        legend: {
+            enabled: true,
+            align: 'center',
+            verticalAlign: 'bottom',
+            y: 10,
+            floating: false,
+            backgroundColor: 'transparent',
+            itemStyle: {
+                fontWeight: 'normal',
+                fontSize: '12px'
+            }
+        },
+        plotOptions: {
+            column: {
+                grouping: true,
+                shadow: false,
+                borderWidth: 0,
+                borderRadius: 3,
+                pointWidth: 25,
+                groupPadding: 0.1,
+                pointPadding: 0.05,
+                dataLabels: {
+                    enabled: false
+                },
+                states: {
+                    hover: {
+                        brightness: 0.1,
+                        borderWidth: 0
+                    }
+                },
+                cursor: 'pointer',
+                events: {
+                    legendItemClick: function() {
+                        return false; // Prevent hiding series
+                    }
+                }
+            }
+        },
+        series: [{
+            name: 'NAV Price',
+            data: navPrices,
+            color: '#3b82f6',
+            borderRadius: 3
+        }, {
+            name: 'Market Price',
+            data: marketPrices,
+            color: '#22c55e',
+            borderRadius: 3
+        }],
+        credits: {
+            enabled: false
+        },
+        exporting: {
+            enabled: false // Disable built-in export buttons
+        }
+    });
+}
+
+// Make function globally accessible
+window.renderHighchartsBarChart = renderHighchartsBarChart;
+
+(function() {
+    // Data and state
+    let allHistoricalNavs = @Html.Raw(historicalNavsData);
+    let currentPage = 1;
+    let pageSize = 5;
+    let sortDirection = 'desc'; // Sort by date (newest first)
+
+    // Define rows and their display order
+    const fieldRows = [
+        { key: 'NavPrice', label: 'NAV Price', format: 'currency', align: 'center' },
+        { key: 'MarketPrice', label: 'Market Price', format: 'currency', align: 'center' },
+        { key: 'DailyChangePercent', label: 'Daily Change %', format: 'percent', align: 'center' },
+        { key: 'NetAssetValue', label: 'Net Asset Value (M)', format: 'currency', align: 'center' }
+    ];
+
+    // Sort by date
+    function sortHistoricalNavs(navData, direction) {
+        return navData.sort((a, b) => {
+            const dateA = new Date(a.NavDate);
+            const dateB = new Date(b.NavDate);
+            return direction === 'asc' ? dateA - dateB : dateB - dateA;
+        });
+    }
+
+    // Format date
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-GB');
+    }
+
+    // Format currency
+    function formatCurrency(value) {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+    }
+
+    // Format percentage
+    function formatPercentage(value) {
+        return value.toFixed(2) + '%';
+    }
+
+    // Get formatted value
+    function getFormattedValue(value, format) {
+        switch (format) {
+            case 'currency':
+                return formatCurrency(value);
+            case 'percent':
+                const formatted = formatPercentage(value);
+                const sign = value >= 0 ? '+' : '';
+                const colorClass = value >= 0 ? 'positive-change' : 'negative-change';
+                return { text: sign + formatted, class: colorClass };
+            default:
+                return value;
+        }
+    }
+
+    // Render chart using Highcharts
+    function renderChart(paginatedNavs) {
+        renderHighchartsBarChart(paginatedNavs, 'nav-chart');
+    }
+
+    // Render table header (dates as columns)
+    function renderTableHeader(paginatedNavs) {
+        const thead = document.getElementById('historical-nav-table-head');
+        thead.innerHTML = '';
+
+        // Create header row
+        const headerRow = document.createElement('tr');
+
+        // First cell is empty (row labels column)
+        const emptyTh = document.createElement('th');
+        emptyTh.className = 'table-light';
+        emptyTh.style.width = '150px';
+        headerRow.appendChild(emptyTh);
+
+        // Add date columns
+        paginatedNavs.forEach(nav => {
+            const th = document.createElement('th');
+            th.className = 'table-light text-center';
+            th.style.minWidth = '120px';
+            th.textContent = formatDate(nav.NavDate);
+            headerRow.appendChild(th);
+        });
+
+        thead.appendChild(headerRow);
+    }
+
+    // Render table body (fields as rows)
+    function renderTableBody() {
+        const tbody = document.getElementById('historical-nav-table-body');
+        tbody.innerHTML = '';
+
+        if (allHistoricalNavs.length === 0) {
+            tbody.innerHTML = '<tr><td class="text-center text-muted" colspan="10">No data available</td></tr>';
+            return;
+        }
+
+        // Sort by date
+        let sortedNavs = sortHistoricalNavs([...allHistoricalNavs], sortDirection);
+
+        // Paginate
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const paginatedNavs = sortedNavs.slice(startIndex, endIndex);
+
+        // Render header with dates
+        renderTableHeader(paginatedNavs);
+
+        // Render chart
+        renderChart(paginatedNavs);
+
+        // Render each field as a row
+        fieldRows.forEach(field => {
+            const row = document.createElement('tr');
+
+            // First cell is the field label
+            const labelCell = document.createElement('td');
+            labelCell.textContent = field.label;
+            labelCell.style.fontWeight = 'bold';
+            labelCell.style.textAlign = 'center';
+            row.appendChild(labelCell);
+
+            // Add values for each date
+            paginatedNavs.forEach(nav => {
+                const cell = document.createElement('td');
+                cell.className = `text-${field.align}`;
+
+                const value = nav[field.key];
+                if (field.format === 'percent') {
+                    const result = getFormattedValue(value, field.format);
+                    cell.innerHTML = `<span class="${result.class}">${result.text}</span>`;
+                } else {
+                    cell.textContent = getFormattedValue(value, field.format);
+                }
+
+                row.appendChild(cell);
+            });
+
+            tbody.appendChild(row);
+        });
+
+        // Update pagination info
+        const totalItems = allHistoricalNavs.length;
+        const showingStart = totalItems === 0 ? 0 : startIndex + 1;
+        const showingEnd = Math.min(endIndex, totalItems);
+        document.getElementById('hist-pagination-info').textContent =
+            `Showing ${showingStart}-${showingEnd} of ${totalItems} dates`;
+
+        renderPaginationControls(totalItems);
+    }
+
+    // Render pagination controls
+    function renderPaginationControls(totalItems) {
+        const totalPages = Math.ceil(totalItems / pageSize);
+        const pagination = document.getElementById('hist-pagination-controls');
+
+        if (!pagination) return;
+
+        pagination.innerHTML = '';
+
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage - 1}">Previous</a>`;
+        pagination.appendChild(prevLi);
+
+        // Page numbers
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        startPage = Math.max(1, endPage - 4);
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            pageLi.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+            pagination.appendChild(pageLi);
+        }
+
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" data-page="${currentPage + 1}">Next</a>`;
+        pagination.appendChild(nextLi);
+    }
+
+    // Toggle sort direction
+    function toggleSort() {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        currentPage = 1;
+        renderTableBody();
+        updateSortButton();
+    }
+
+    // Update sort button display
+    function updateSortButton() {
+        const btn = document.getElementById('sort-toggle-btn');
+        const indicator = document.getElementById('sort-indicator');
+        if (btn && indicator) {
+            if (sortDirection === 'desc') {
+                btn.textContent = 'Sort: Newest First ';
+                indicator.textContent = '↓';
+            } else {
+                btn.textContent = 'Sort: Oldest First ';
+                indicator.textContent = '↑';
+            }
+        }
+    }
+
+    // Event listeners
+    document.addEventListener('click', function(e) {
+        // Handle sort toggle button
+        if (e.target.closest('#sort-toggle-btn')) {
+            e.preventDefault();
+            toggleSort();
+            return;
+        }
+
+        // Handle pagination click
+        const pageLink = e.target.closest('.page-link');
+        if (pageLink && pageLink.dataset.page) {
+            e.preventDefault();
+            const newPage = parseInt(pageLink.dataset.page);
+            const totalPages = Math.ceil(allHistoricalNavs.length / pageSize);
+
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderTableBody();
+            }
+        }
+    });
+
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'hist-page-size-select') {
+            pageSize = parseInt(e.target.value);
+            currentPage = 1;
+            renderTableBody();
+        }
+    });
+
+    // Update download links when tokens are fetched
+    function updateHistoricalDownloadLinks(tokens) {
+        const fundId = @Model.FundId;
+        document.getElementById('download-hist-pdf').href = `/funds/historical-nav-pdf/${fundId}?token=${tokens.pdf}`;
+        document.getElementById('download-hist-excel').href = `/funds/historical-nav-excel/${fundId}?token=${tokens.excelGeneric}`;
+    }
+
+    // Listen for token updates from main page
+    if (window.updateHistoricalDownloadLinks) {
+        window.updateHistoricalDownloadLinks = updateHistoricalDownloadLinks;
+    }
+
+    // Initial render
+    renderTableBody();
+    updateSortButton();
+
+    // Handle window resize to adjust chart width (Highcharts handles this automatically)
+    // No manual resize handling needed with Highcharts
+})();
+</script>
