@@ -512,6 +512,56 @@ Highcharts.chart(container, {
 
 **Note**: The chart no longer tries to align with table columns by skipping the label column. Instead, the Y-axis remains on the left edge, which is the standard and expected behavior for bar charts.
 
+### Bar Group Width Alignment (Added 2026-02-09)
+
+**Overview**: Adjusted bar width calculation to make each group match the table column width for better visual alignment.
+
+**Problem**: The individual bars were sized with a fixed 8px gap subtracted, which didn't account for the `groupPadding` setting. This caused the total group width to be smaller than the table column width.
+
+**Solution**: Updated the calculation to proportionally distribute the available width after accounting for `groupPadding`.
+
+**Implementation**:
+
+```javascript
+// Before: Fixed 8px gap didn't account for groupPadding
+const barWidth = Math.floor(columnWidth / 2) - 8;
+
+// After: Proportional calculation based on available width
+const availableWidth = columnWidth * (1 - groupPadding);
+const barWidth = Math.floor(availableWidth / 2);
+```
+
+**Calculation Explained**:
+
+1. **Available Width**: `columnWidth * (1 - groupPadding)`
+   - Accounts for the space between groups
+   - Desktop: `columnWidth * 0.95` (5% group padding)
+   - Mobile: `columnWidth * 0.75` (25% group padding)
+
+2. **Bar Width**: `availableWidth / 2`
+   - Each bar gets half the available width
+   - Two bars (NAV + Market) fit in each group
+
+3. **Result**: Total group width ≈ table column width
+
+**Visual Layout**:
+```
+Table:  [Label] | 120px | 120px | 120px |
+Chart:  [Y-axis] | ~120px | ~120px | ~120px |
+                  [NAV|Mkt] [NAV|Mkt] [NAV|Mkt]
+```
+
+**Benefits**:
+- Bar groups now match table column widths
+- Better visual alignment between chart and table
+- Proportional scaling with responsive padding
+- More accurate representation of data density
+
+**Mobile Responsive**:
+- On mobile: Larger groupPadding (0.25) creates more separation
+- Each bar still gets proportional width: `(columnWidth * 0.75) / 2`
+- Maintains visual consistency across screen sizes
+
 ### Related Files
 
 - Original: `Umbraco13/Views/Shared/Components/HistoricalNavTable/Default.cshtml`
