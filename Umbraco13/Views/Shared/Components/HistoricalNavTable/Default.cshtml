@@ -37,8 +37,8 @@
         <div class="card mb-4">
             <div class="card-body">
                 <h5 class="card-title text-center mb-4">NAV Price vs Market Price Chart</h5>
-                <div id="nav-chart-container" style="width: 100%; min-width: 600px;">
-                    <div id="nav-chart" style="height: 350px;"></div>
+                <div id="nav-chart-container" style="width: 100%; overflow-x: auto;">
+                    <div id="nav-chart" style="min-width: 100%; height: 350px;"></div>
                 </div>
             </div>
         </div>
@@ -117,8 +117,10 @@
  * Render Highcharts bar chart for NAV history
  * @@param {Array} data - Array of historical nav objects
  * @@param {string} containerId - ID of chart container
+ * @@param {number} tableColumnWidth - Width of each table column in pixels (optional)
+ * @@param {number} labelColumnWidth - Width of the label column to skip (optional)
  */
-function renderHighchartsBarChart(data, containerId) {
+function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColumnWidth) {
     const container = document.getElementById(containerId);
     if (!container || !data || data.length === 0) {
         if (container) {
@@ -136,6 +138,15 @@ function renderHighchartsBarChart(data, containerId) {
     const navPrices = data.map(item => item.NavPrice !== null && item.NavPrice !== undefined ? item.NavPrice : null);
     const marketPrices = data.map(item => item.MarketPrice !== null && item.MarketPrice !== undefined ? item.MarketPrice : null);
 
+    // Calculate bar width based on table column width
+    // Each column has 2 bars (NAV + Market), so each bar gets (columnWidth / 2)
+    const columnWidth = tableColumnWidth || 150; // Default 150px if not provided
+    const barWidth = Math.floor(columnWidth / 2) - 8; // Leave small gap between bars
+    const groupPadding = 0.05; // Minimal padding between groups
+
+    // Calculate left margin to skip the label column
+    const marginLeft = labelColumnWidth || 0;
+
     // Create chart
     Highcharts.chart(container, {
         chart: {
@@ -144,7 +155,12 @@ function renderHighchartsBarChart(data, containerId) {
                 fontFamily: 'Arial, sans-serif'
             },
             backgroundColor: '#f8f9fa',
-            borderRadius: 8
+            borderRadius: 8,
+            // Match table width
+            width: null,
+            height: 350,
+            // Add left margin to skip label column
+            marginLeft: marginLeft
         },
         title: {
             text: null
@@ -163,7 +179,9 @@ function renderHighchartsBarChart(data, containerId) {
                     fontSize: '12px',
                     fontWeight: '500'
                 }
-            }
+            },
+            tickLength: 0,
+            lineWidth: 0
         },
         yAxis: {
             title: {
@@ -233,9 +251,9 @@ function renderHighchartsBarChart(data, containerId) {
                 shadow: false,
                 borderWidth: 0,
                 borderRadius: 3,
-                pointWidth: 25,
-                groupPadding: 0.1,
-                pointPadding: 0.05,
+                pointWidth: Math.max(10, barWidth), // Min 10px to ensure visibility
+                groupPadding: groupPadding,
+                pointPadding: 0.02, // Minimal padding between bars in a group
                 dataLabels: {
                     enabled: false
                 },
@@ -333,7 +351,36 @@ window.renderHighchartsBarChart = renderHighchartsBarChart;
 
     // Render chart using Highcharts
     function renderChart(paginatedNavs) {
-        renderHighchartsBarChart(paginatedNavs, 'nav-chart');
+        // Use setTimeout to ensure table is fully rendered before measuring
+        setTimeout(function() {
+            // Get table to measure column widths
+            const table = document.getElementById('historical-nav-table');
+            let tableColumnWidth = 120; // Default fallback (matches table minWidth)
+            let labelColumnWidth = 0;
+
+            if (table) {
+                // Get first data row to measure column widths
+                const firstRow = table.querySelector('tbody tr');
+                if (firstRow) {
+                    // Get label column width (first cell)
+                    const labelCell = firstRow.cells[0];
+                    if (labelCell) {
+                        labelColumnWidth = labelCell.offsetWidth;
+                    }
+
+                    // Get first data column width (second cell - after label column)
+                    const firstDataCell = firstRow.cells[1];
+                    if (firstDataCell) {
+                        tableColumnWidth = firstDataCell.offsetWidth;
+                    }
+                }
+            }
+
+            // Ensure minimum width for bars
+            tableColumnWidth = Math.max(100, tableColumnWidth);
+
+            renderHighchartsBarChart(paginatedNavs, 'nav-chart', tableColumnWidth, labelColumnWidth);
+        }, 50); // Small delay to ensure DOM is ready
     }
 
     // Render table header (dates as columns)
@@ -530,7 +577,18 @@ window.renderHighchartsBarChart = renderHighchartsBarChart;
     renderTableBody();
     updateSortButton();
 
-    // Handle window resize to adjust chart width (Highcharts handles this automatically)
-    // No manual resize handling needed with Highcharts
+    // Handle window resize to adjust chart width
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            // Re-render chart with updated column widths
+            let sortedNavs = sortHistoricalNavs([...allHistoricalNavs], sortDirection);
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const paginatedNavs = sortedNavs.slice(startIndex, endIndex);
+            renderChart(paginatedNavs);
+        }, 250);
+    });
 })();
 </script>
