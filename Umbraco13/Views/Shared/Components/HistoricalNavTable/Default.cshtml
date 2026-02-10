@@ -139,8 +139,7 @@ function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColu
     const marketPrices = data.map(item => item.MarketPrice !== null && item.MarketPrice !== undefined ? item.MarketPrice : null);
 
     // Calculate bar width based on table column width
-    // Each group has 2 bars (NAV + Market), and the entire group should match the table column width
-    // With groupPadding and pointPadding, we need to adjust the bar width
+    // Each group has 2 bars (NAV + Market), make them thinner with more space between groups
     const columnWidth = tableColumnWidth || 150; // Default 150px if not provided
 
     // Detect screen width for responsive padding
@@ -148,15 +147,15 @@ function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColu
 
     // Calculate padding based on screen size
     // For mobile: more group padding to separate date groups visually
-    // For desktop: minimal padding for compact display
-    const groupPadding = isMobile ? 0.25 : 0.05; // More space between groups on mobile
+    // For desktop: increased group padding for thinner bars with more separation
+    const groupPadding = isMobile ? 0.30 : 0.20; // More space between groups
     const pointPadding = isMobile ? 0.05 : 0.02; // Slightly more space between bars on mobile
 
-    // Calculate bar width so the entire group (2 bars) matches table column width
-    // Each group = 2 bars + padding between them
-    // Available width per bar = (columnWidth * (1 - groupPadding)) / 2
-    const availableWidth = columnWidth * (1 - groupPadding);
-    const barWidth = Math.floor(availableWidth / 2); // Each bar gets half the available width
+    // Calculate bar width to make them thinner
+    // Use a percentage of the column width instead of filling the entire space
+    const barWidth = isMobile ? Math.floor(columnWidth * 0.25) : Math.floor(columnWidth * 0.30);
+    // Each bar is 25-30% of column width, so 2 bars = 50-60% of column width
+    // Remaining 40-50% becomes space between groups
 
     // Create chart
     Highcharts.chart(container, {
