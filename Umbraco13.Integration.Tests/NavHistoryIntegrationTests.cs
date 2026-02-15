@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using Umbraco.Cms.Core.IO;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
 using Umbraco13.Models;
@@ -23,14 +22,14 @@ public class NavHistoryIntegrationTests : IClassFixture<NavHistoryTestFixture>
     {
         // Assert
         Assert.NotNull(_fixture.MediaService);
-        Assert.NotNull(_fixture.MediaFileSystem);
-        Assert.NotNull(_fixture.NavHistoryService);
+        var service = _fixture.CreateService();
+        Assert.NotNull(service);
     }
 
     [Fact]
-    public async Task NavHistoryService_WithRealDI_LoadsJsonIntoList()
+    public async Task NavHistoryService_WithRealDI_LoadsJsonFromDisk()
     {
-        // Arrange - Create a test JSON file in memory
+        // Arrange - Create a test JSON file on disk
         var testJson = @"{
             ""TESTFUND"": [
                 { ""date"": ""2025-01-01"", ""navPrice"": 10.50, ""marketPrice"": 10.25 },
@@ -39,43 +38,61 @@ public class NavHistoryIntegrationTests : IClassFixture<NavHistoryTestFixture>
             ]
         }";
 
-        // Create a mock media item
-        var mediaItem = Substitute.For<IMedia>();
-        mediaItem.Name.Returns("funds.json");
-        mediaItem.GetValue<string>("umbracoFile").Returns("/media/funds.json");
+        var testDir = Path.Combine(Path.GetTempPath(), "navhistory-tests");
+        Directory.CreateDirectory(testDir);
+        var testFile = Path.Combine(testDir, "funds.json");
 
-        _fixture.MediaService.GetRootMedia().Returns(new[] { mediaItem });
-        _fixture.MediaFileSystem.FileExists("/media/funds.json").Returns(true);
+        try
+        {
+            await System.IO.File.WriteAllTextAsync(testFile, testJson);
 
-        // Create file stream from JSON
-        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testJson));
-        _fixture.MediaFileSystem.OpenFile("/media/funds.json").Returns(stream);
+            // Create a mock media item that returns the file path
+            var mediaItem = Substitute.For<IMedia>();
+            mediaItem.Name.Returns("funds.json");
+            mediaItem.GetValue<string>("umbracoFile").Returns("/media/funds.json");
+            mediaItem.GetValue<string>("path").Returns(testDir);
 
-        // Act - Use the actual NavHistoryService from DI
-        var result = await _fixture.NavHistoryService.GetNavHistoryAsync("TESTFUND");
+            _fixture.MediaService.GetRootMedia().Returns(new[] { mediaItem });
 
-        // Assert - Verify we get a list back
-        Assert.NotNull(result);
-        Assert.IsType<List<NavHistoryEntry>>(result);
-        Assert.Equal(3, result.Count);
-        Assert.Equal("TESTFUND", result[0].TickerCode);
+            // Act - Use the actual NavHistoryService from DI
+            var service = _fixture.CreateService();
+            var result = await service.GetNavHistoryAsync("TESTFUND");
 
-        // Verify data was parsed correctly
-        Assert.Equal(10.50m, result[0].NavPrice);
-        Assert.Equal(10.25m, result[0].MarketPrice);
-        Assert.Equal(new DateTime(2025, 1, 1), result[0].Date);
+            // Assert - Verify we get a list back
+            Assert.NotNull(result);
+            Assert.IsType<List<NavHistoryEntry>>(result);
+            Assert.Equal(3, result.Count);
+            Assert.Equal("TESTFUND", result[0].TickerCode);
 
-        Assert.Equal(10.75m, result[1].NavPrice);
-        Assert.Equal(10.50m, result[1].MarketPrice);
+            // Verify data was parsed correctly
+            Assert.Equal(10.50m, result[0].NavPrice);
+            Assert.Equal(10.25m, result[0].MarketPrice);
+            Assert.Equal(new DateTime(2025, 1, 1), result[0].Date);
 
-        Assert.Equal(11.00m, result[2].NavPrice);
-        Assert.Equal(10.75m, result[2].MarketPrice);
+            Assert.Equal(10.75m, result[1].NavPrice);
+            Assert.Equal(10.50m, result[1].MarketPrice);
+
+            Assert.Equal(11.00m, result[2].NavPrice);
+            Assert.Equal(10.75m, result[2].MarketPrice);
+        }
+        finally
+        {
+            // Cleanup
+            if (Directory.Exists(testDir))
+            {
+                try
+                {
+                    Directory.Delete(testDir, true);
+                }
+                catch { /* Ignore cleanup errors */ }
+            }
+        }
     }
 
     [Fact]
-    public async Task NavHistoryService_WithNestedJson_LoadsIntoList()
+    public async Task NavHistoryService_WithNestedJson_LoadsFromDisk()
     {
-        // Arrange - Test with nested navHistory format
+        // Arrange
         var testJson = @"{
             ""TESTFUND"": {
                 ""navHistory"": [
@@ -85,89 +102,143 @@ public class NavHistoryIntegrationTests : IClassFixture<NavHistoryTestFixture>
             }
         }";
 
-        var mediaItem = Substitute.For<IMedia>();
-        mediaItem.Name.Returns("funds.json");
-        mediaItem.GetValue<string>("umbracoFile").Returns("/media/funds.json");
+        var testDir = Path.Combine(Path.GetTempPath(), "navhistory-tests-nested");
+        Directory.CreateDirectory(testDir);
+        var testFile = Path.Combine(testDir, "funds.json");
 
-        _fixture.MediaService.GetRootMedia().Returns(new[] { mediaItem });
-        _fixture.MediaFileSystem.FileExists("/media/funds.json").Returns(true);
+        try
+        {
+            await System.IO.File.WriteAllTextAsync(testFile, testJson);
 
-        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testJson));
-        _fixture.MediaFileSystem.OpenFile("/media/funds.json").Returns(stream);
+            var mediaItem = Substitute.For<IMedia>();
+            mediaItem.Name.Returns("funds.json");
+            mediaItem.GetValue<string>("umbracoFile").Returns("/media/funds.json");
+            mediaItem.GetValue<string>("path").Returns(testDir);
 
-        // Act
-        var result = await _fixture.NavHistoryService.GetNavHistoryAsync("TESTFUND");
+            _fixture.MediaService.GetRootMedia().Returns(new[] { mediaItem });
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count);
-        Assert.Equal("TESTFUND", result[0].TickerCode);
-        Assert.Equal(10.50m, result[0].NavPrice);
+            // Act
+            var service = _fixture.CreateService();
+            var result = await service.GetNavHistoryAsync("TESTFUND");
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal(2, result.Count());
+            Assert.Equal("TESTFUND", result[0].TickerCode);
+            Assert.Equal(10.50m, result[0].NavPrice);
+        }
+        finally
+        {
+            if (Directory.Exists(testDir))
+            {
+                try
+                {
+                    Directory.Delete(testDir, true);
+                }
+                catch { /* Ignore */ }
+            }
+        }
     }
 
     [Fact]
-    public async Task NavHistoryService_WithMissingMarketPrice_LoadsIntoList()
+    public async Task NavHistoryService_WithMissingMarketPrice_LoadsFromDisk()
     {
-        // Arrange - Test with optional marketPrice field
+        // Arrange
         var testJson = @"{
             ""TESTFUND"": [
                 { ""date"": ""2025-01-01"", ""navPrice"": 10.50 }
             ]
         }";
 
-        var mediaItem = Substitute.For<IMedia>();
-        mediaItem.Name.Returns("funds.json");
-        mediaItem.GetValue<string>("umbracoFile").Returns("/media/funds.json");
+        var testDir = Path.Combine(Path.GetTempPath(), "navhistory-tests-optional");
+        Directory.CreateDirectory(testDir);
+        var testFile = Path.Combine(testDir, "funds.json");
 
-        _fixture.MediaService.GetRootMedia().Returns(new[] { mediaItem });
-        _fixture.MediaFileSystem.FileExists("/media/funds.json").Returns(true);
+        try
+        {
+            await System.IO.File.WriteAllTextAsync(testFile, testJson);
 
-        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testJson));
-        _fixture.MediaFileSystem.OpenFile("/media/funds.json").Returns(stream);
+            var mediaItem = Substitute.For<IMedia>();
+            mediaItem.Name.Returns("funds.json");
+            mediaItem.GetValue<string>("umbracoFile").Returns("/media/funds.json");
+            mediaItem.GetValue<string>("path").Returns(testDir);
 
-        // Act
-        var result = await _fixture.NavHistoryService.GetNavHistoryAsync("TESTFUND");
+            _fixture.MediaService.GetRootMedia().Returns(new[] { mediaItem });
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(10.50m, result[0].NavPrice);
-        Assert.Null(result[0].MarketPrice);
+            // Act
+            var service = _fixture.CreateService();
+            var result = await service.GetNavHistoryAsync("TESTFUND");
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Single(result);
+            Assert.Equal(10.50m, result[0].NavPrice);
+            Assert.Null(result[0].MarketPrice);
+        }
+        finally
+        {
+            if (Directory.Exists(testDir))
+            {
+                try
+                {
+                    Directory.Delete(testDir, true);
+                }
+                catch { /* Ignore */ }
+            }
+        }
     }
 
     [Fact]
     public async Task NavHistoryService_WithInvalidDate_HandlesGracefully()
     {
-        // Arrange - Test with invalid date format
+        // Arrange
         var testJson = @"{
             ""TESTFUND"": [
                 { ""date"": ""invalid-date"", ""navPrice"": 10.50, ""marketPrice"": 10.25 }
             ]
         }";
 
-        var mediaItem = Substitute.For<IMedia>();
-        mediaItem.Name.Returns("funds.json");
-        mediaItem.GetValue<string>("umbracoFile").Returns("/media/funds.json");
+        var testDir = Path.Combine(Path.GetTempPath(), "navhistory-tests-invalid");
+        Directory.CreateDirectory(testDir);
+        var testFile = Path.Combine(testDir, "funds.json");
 
-        _fixture.MediaService.GetRootMedia().Returns(new[] { mediaItem });
-        _fixture.MediaFileSystem.FileExists("/media/funds.json").Returns(true);
+        try
+        {
+            await System.IO.File.WriteAllTextAsync(testFile, testJson);
 
-        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testJson));
-        _fixture.MediaFileSystem.OpenFile("/media/funds.json").Returns(stream);
+            var mediaItem = Substitute.For<IMedia>();
+            mediaItem.Name.Returns("funds.json");
+            mediaItem.GetValue<string>("umbracoFile").Returns("/media/funds.json");
+            mediaItem.GetValue<string>("path").Returns(testDir);
 
-        // Act
-        var result = await _fixture.NavHistoryService.GetNavHistoryAsync("TESTFUND");
+            _fixture.MediaService.GetRootMedia().Returns(new[] { mediaItem });
 
-        // Assert - Should still return a list with default date
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal(default(DateTime), result[0].Date);
+            // Act
+            var service = _fixture.CreateService();
+            var result = await service.GetNavHistoryAsync("TESTFUND");
+
+            // Assert - Should still return a list with default date
+            Assert.NotNull(result);
+            Assert.Single(result);
+            Assert.Equal(default(DateTime), result[0].Date);
+        }
+        finally
+        {
+            if (Directory.Exists(testDir))
+            {
+                try
+                {
+                    Directory.Delete(testDir, true);
+                }
+                catch { /* Ignore */ }
+            }
+        }
     }
 
     [Fact]
-    public async Task NavHistoryService_ReturnsList_WithDescendingDates()
+    public async Task NavHistoryService_PreservesDataOrder()
     {
-        // Arrange - Test that dates are in correct order in the list
+        // Arrange
         var testJson = @"{
             ""TESTFUND"": [
                 { ""date"": ""2025-01-03"", ""navPrice"": 11.00 },
@@ -176,33 +247,89 @@ public class NavHistoryIntegrationTests : IClassFixture<NavHistoryTestFixture>
             ]
         }";
 
-        var mediaItem = Substitute.For<IMedia>();
-        mediaItem.Name.Returns("funds.json");
-        mediaItem.GetValue<string>("umbracoFile").Returns("/media/funds.json");
+        var testDir = Path.Combine(Path.GetTempPath(), "navhistory-tests-order");
+        Directory.CreateDirectory(testDir);
+        var testFile = Path.Combine(testDir, "funds.json");
 
-        _fixture.MediaService.GetRootMedia().Returns(new[] { mediaItem });
-        _fixture.MediaFileSystem.FileExists("/media/funds.json").Returns(true);
+        try
+        {
+            await System.IO.File.WriteAllTextAsync(testFile, testJson);
 
-        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testJson));
-        _fixture.MediaFileSystem.OpenFile("/media/funds.json").Returns(stream);
+            var mediaItem = Substitute.For<IMedia>();
+            mediaItem.Name.Returns("funds.json");
+            mediaItem.GetValue<string>("umbracoFile").Returns("/media/funds.json");
+            mediaItem.GetValue<string>("path").Returns(testDir);
 
-        // Act
-        var result = await _fixture.NavHistoryService.GetNavHistoryAsync("TESTFUND");
+            _fixture.MediaService.GetRootMedia().Returns(new[] { mediaItem });
 
-        // Assert - Verify list is populated with all entries
-        Assert.NotNull(result);
-        Assert.Equal(3, result.Count);
-        Assert.Equal(11.00m, result[0].NavPrice);
-        Assert.Equal(10.50m, result[1].NavPrice);
-        Assert.Equal(10.75m, result[2].NavPrice);
+            // Act
+            var service = _fixture.CreateService();
+            var result = await service.GetNavHistoryAsync("TESTFUND");
+
+            // Assert - Verify list preserves JSON order
+            Assert.NotNull(result);
+            Assert.Equal(3, result.Count);
+            Assert.Equal(11.00m, result[0].NavPrice);
+            Assert.Equal(10.50m, result[1].NavPrice);
+            Assert.Equal(10.75m, result[2].NavPrice);
+        }
+        finally
+        {
+            if (Directory.Exists(testDir))
+            {
+                try
+                {
+                    Directory.Delete(testDir, true);
+                }
+                catch { /* Ignore */ }
+            }
+        }
+    }
+
+    [Fact]
+    public async Task NavHistoryService_WithNullTicker_ReturnsNull()
+    {
+        // Arrange
+        var testDir = Path.Combine(Path.GetTempPath(), "navhistory-tests-null");
+        Directory.CreateDirectory(testDir);
+        var testFile = Path.Combine(testDir, "funds.json");
+
+        try
+        {
+            System.IO.File.WriteAllText(testFile, @"{ ""TEST"": [] }");
+
+            var mediaItem = Substitute.For<IMedia>();
+            mediaItem.Name.Returns("funds.json");
+            mediaItem.GetValue<string>("umbracoFile").Returns("/media/funds.json");
+            mediaItem.GetValue<string>("path").Returns(testDir.Replace(Directory.GetCurrentDirectory(), "").TrimStart('/'));
+
+            _fixture.MediaService.GetRootMedia().Returns(new[] { mediaItem });
+
+            // Act
+            var service = _fixture.CreateService();
+            var result = await service.GetNavHistoryAsync(null);
+
+            // Assert
+            Assert.Null(result);
+        }
+        finally
+        {
+            if (Directory.Exists(testDir))
+            {
+                try
+                {
+                    Directory.Delete(testDir, true);
+                }
+                catch { /* Ignore */ }
+            }
+        }
     }
 }
 
 public class NavHistoryTestFixture
 {
     public IMediaService MediaService { get; }
-    public IFileSystem MediaFileSystem { get; }
-    public INavHistoryService NavHistoryService { get; }
+    public IServiceProvider ServiceProvider { get; }
 
     public NavHistoryTestFixture()
     {
@@ -214,18 +341,17 @@ public class NavHistoryTestFixture
 
         // Register the services (using NSubstitute for interfaces we can't instantiate)
         MediaService = Substitute.For<IMediaService>();
-        MediaFileSystem = Substitute.For<IFileSystem>();
 
         services.AddSingleton(MediaService);
-        services.AddSingleton(MediaFileSystem);
         services.AddScoped<INavHistoryService, NavHistoryService>();
 
-        var serviceProvider = services.BuildServiceProvider();
+        ServiceProvider = services.BuildServiceProvider();
+    }
 
-        // Get the NavHistoryService from DI container
-        NavHistoryService = serviceProvider.GetRequiredService<INavHistoryService>();
-
-        // Verify service is created successfully
-        Assert.NotNull(NavHistoryService);
+    public INavHistoryService CreateService()
+    {
+        // Create a new scope for each test to get a fresh service instance
+        var scope = ServiceProvider.CreateScope();
+        return scope.ServiceProvider.GetRequiredService<INavHistoryService>();
     }
 }
