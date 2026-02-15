@@ -24,6 +24,7 @@ builder.Services.AddScoped<Umbraco13.Services.IDownloadTokenService, Umbraco13.S
 builder.Services.AddScoped<Umbraco13.Services.IPdfExportService, Umbraco13.Services.PdfExportService>();
 builder.Services.AddScoped<Umbraco13.Services.IExcelExportService, Umbraco13.Services.ExcelExportService>();
 builder.Services.AddScoped<Umbraco13.Services.INavHistoryService, Umbraco13.Services.NavHistoryService>();
+builder.Services.AddSingleton<Umbraco13.Services.IFundsJsonService, Umbraco13.Services.FundsJsonService>();
 
 // Add JWT Bearer authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
