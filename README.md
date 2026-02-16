@@ -21,9 +21,10 @@ A web application built with Umbraco CMS v13 for managing and displaying investm
 
 - **Framework**: Umbraco CMS 13.10.0
 - **Backend**: ASP.NET Core 8.0
-- **Frontend**: Razor Views, JavaScript, SVG
+- **Frontend**: Razor Views, JavaScript, Highcharts 5.0.7
 - **PDF Library**: PdfSharp
 - **Excel Library**: ClosedXML
+- **Media Services**: Umbraco MediaFileManager & IMediaService
 
 ## Installation
 
@@ -65,7 +66,11 @@ Umbraco13/
 ├── Views/                    # Razor views
 │   └── Shared/
 │       └── Components/
+│       └── HistoricalNavTable/
+│           └── Default.highcharts.cshtml  # Highcharts chart with alignment
 ├── wwwroot/                  # Static assets
+│   └── js/
+│       └── scripts.js
 └── appsettings.json          # Configuration
 ```
 
@@ -143,6 +148,87 @@ if (isValid)
 @await Component.InvokeAsync("FundsJson")
 ```
 
+### Media Library Service (MediaFileManager)
+
+```csharp
+/// FundsJsonService uses MediaFileManager to load funds.json from Umbraco media library
+/// No direct instantiation needed - registered as singleton in DI container
+
+public class FundsJsonService : IFundsJsonService
+{
+    private readonly MediaFileManager _mediaFileManager;
+    private readonly IMediaService _mediaService;
+
+    // Automatically loads and caches funds.json at startup
+    // Uses MediaFileManager.FileSystem to access media files
+    // Uses IMediaService to locate funds.json in media library
+}
+```
+
+### Highcharts Alignment JavaScript
+
+```javascript
+/**
+ * Render Highcharts bar chart with dynamic table column alignment
+ * Automatically calculates bar widths and positions to match table columns
+ *
+ * Features:
+ * - Dynamic width measurement from table cells
+ * - Responsive padding (mobile vs desktop)
+ * - Left margin to align with table data columns
+ * - Auto-resize on window resize
+ */
+function renderHighchartsBarChart(data, containerId, tableColumnWidth, labelColumnWidth) {
+    const isMobile = window.innerWidth < 768;
+
+    // Responsive padding: more space on mobile
+    const groupPadding = isMobile ? 0.30 : 0.20;
+    const pointPadding = isMobile ? 0.05 : 0.02;
+
+    // Calculate bar width as percentage of column
+    const barWidth = isMobile
+        ? Math.floor(tableColumnWidth * 0.25)
+        : Math.floor(tableColumnWidth * 0.30);
+
+    Highcharts.chart(containerId, {
+        chart: {
+            type: 'column',
+            marginLeft: labelColumnWidth,  // Skip label column
+            backgroundColor: '#f8f9fa',
+            borderRadius: 8
+        },
+        plotOptions: {
+            column: {
+                pointWidth: barWidth,      // Dynamic width
+                groupPadding: groupPadding, // Space between date groups
+                pointPadding: pointPadding, // Space between NAV/Market bars
+                borderRadius: 3
+            }
+        },
+        series: [
+            { name: 'NAV Price', data: navPrices, color: '#3b82f6' },
+            { name: 'Market Price', data: marketPrices, color: '#22c55e' }
+        ]
+    });
+}
+
+// Call with measured table dimensions
+function renderChart(paginatedNavs) {
+    setTimeout(() => {
+        const table = document.getElementById('historical-nav-table');
+        const labelCell = table.querySelector('tbody tr td:first-child');
+        const dataCell = table.querySelector('tbody tr td:nth-child(2)');
+
+        renderHighchartsBarChart(
+            paginatedNavs,
+            'nav-chart',
+            dataCell?.offsetWidth || 120,
+            labelCell?.offsetWidth || 0
+        );
+    }, 50); // Wait for DOM render
+}
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -192,6 +278,7 @@ For detailed implementation documentation, see the `notes/` folder:
 - [Funds JSON Service](notes/refactoring/Refactor-FundsJsonService-to-use-MediaFileManager_2025-02-15.md) - In-memory caching with MediaFileManager
 - [Navigation History Service](notes/features/navigation/NavHistory-Integration-2026-02-14.md) - NAV data management
 - [Download Token Service](notes/configuration/auth.md) - Secure token-based downloads
+- [Media Library Integration](notes/helpers/file_service.md) - MediaFileManager usage
 
 ### Export Features
 - [PDF Export Service Guide](notes/pdf-features/pdf_export_service_usage.md)
@@ -204,6 +291,7 @@ For detailed implementation documentation, see the `notes/` folder:
 - [Historical NAV Table](notes/features/navigation/HistoricalNavPivotedTable_2026-01-31.md) - Pivoted table layout
 - [Dynamic Table Sorting & Pagination](notes/features/tables/dynamic_table_sorting_pagination.md)
 - [Highcharts Integration](notes/features/charts/Highcharts507NavChart-2026-02-08.md) - Interactive charts
+- [Highcharts Alignment](notes/features/charts/HighchartsNavChartRefinement-2026-02-08.md) - Bar-to-column alignment
 - [Border Options for Sections](notes/features/tables/BorderOptionsForSections-2026-02-06.md)
 
 ### Configuration
