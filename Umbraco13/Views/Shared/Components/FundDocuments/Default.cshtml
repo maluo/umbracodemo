@@ -1,0 +1,85 @@
+@model Umbraco13.Models.FundDocumentsViewModel
+
+<div class="fund-documents-section mt-5">
+    <h3>Documents for @Model.FundName (@Model.TickerCode)</h3>
+    
+    <ul class="nav nav-tabs" id="fundDocTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="factsheets-tab" data-bs-toggle="tab" data-bs-target="#factsheets" type="button" role="tab" aria-controls="factsheets" aria-selected="true">Factsheets</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="prospectus-tab" data-bs-toggle="tab" data-bs-target="#prospectus" type="button" role="tab" aria-controls="prospectus" aria-selected="false">Prospectus</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports" type="button" role="tab" aria-controls="reports" aria-selected="false">Reports</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="raw-json-tab" data-bs-toggle="tab" data-bs-target="#raw-json" type="button" role="tab" aria-controls="raw-json" aria-selected="false">Raw JSON Data</button>
+        </li>
+    </ul>
+    
+    <div class="tab-content p-3 border border-top-0" id="fundDocTabsContent">
+        <div class="tab-pane fade show active" id="factsheets" role="tabpanel" aria-labelledby="factsheets-tab">
+            @if (Model.Factsheets.Any())
+            {
+                <ul class="list-group">
+                    @foreach (var doc in Model.Factsheets)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-file-earmark-pdf me-2 text-danger"></i> @doc.Name</span>
+                            <a href="@doc.Url" class="btn btn-sm btn-outline-primary" target="_blank">Download</a>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="text-muted">No factsheets available for this fund.</p>
+            }
+        </div>
+        
+        <div class="tab-pane fade" id="prospectus" role="tabpanel" aria-labelledby="prospectus-tab">
+            @if (Model.Prospectus.Any())
+            {
+                <ul class="list-group">
+                    @foreach (var doc in Model.Prospectus)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-file-earmark-text me-2 text-primary"></i> @doc.Name</span>
+                            <a href="@doc.Url" class="btn btn-sm btn-outline-primary" target="_blank">Download</a>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="text-muted">No prospectus available for this fund.</p>
+            }
+        </div>
+        
+        <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab">
+            @if (Model.Reports.Any())
+            {
+                <ul class="list-group">
+                    @foreach (var doc in Model.Reports)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-file-earmark-bar-graph me-2 text-success"></i> @doc.Name</span>
+                            <a href="@doc.Url" class="btn btn-sm btn-outline-primary" target="_blank">Download</a>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="text-muted">No reports available for this fund.</p>
+            }
+        </div>
+
+        <div class="tab-pane fade" id="raw-json" role="tabpanel" aria-labelledby="raw-json-tab">
+            <div class="bg-light p-3 rounded">
+                <pre class="mb-0"><code>@Model.RawJson</code></pre>
+            </div>
+        </div>
+    </div>
+</div>

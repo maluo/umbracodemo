@@ -1,0 +1,61 @@
+@model Umbraco13.Models.NavHistoryViewModel
+
+@{
+    ViewData["Title"] = $"NAV History - {Model.TickerCode}";
+}
+
+<div class="nav-history-container">
+    <h3>NAV History - @Model.TickerCode</h3>
+
+    @if (Model.History != null && Model.History.Count > 0)
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Date</th>
+                        <th>NAV Price</th>
+                        <th>Market Price</th>
+                        <th>Discount/Premium (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in Model.History.OrderByDescending(h => h.Date))
+                    {
+                        var discountPremium = entry.MarketPrice.HasValue && entry.MarketPrice.Value != 0
+                            ? ((entry.NavPrice - entry.MarketPrice.Value) / entry.MarketPrice.Value * 100m)
+                            : (decimal?)null;
+
+                        <tr>
+                            <td>@entry.Date.ToString("yyyy-MM-dd")</td>
+                            <td>@entry.NavPrice.ToString("F4")</td>
+                            <td>@(entry.MarketPrice?.ToString("F4") ?? "-")</td>
+                            <td>
+                                @if (discountPremium.HasValue)
+                                {
+                                    <span class="@(discountPremium.Value >= 0 ? "text-success" : "text-danger")">
+                                        @(discountPremium.Value >= 0 ? "+" : "")@discountPremium.Value.ToString("F2")%
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-info mt-3">
+            <strong>Total Records:</strong> @Model.History.Count
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning" role="alert">
+            No NAV history data available for @Model.TickerCode.
+        </div>
+    }
+</div>
