@@ -24,7 +24,7 @@ namespace Umbraco13.Models
         public decimal NavPrice { get; set; }
 
         [JsonPropertyName("marketPrice")]
-        public decimal MarketPrice { get; set; }
+        public decimal? MarketPrice { get; set; }
 
         [JsonPropertyName("holdInTrust")]
         public string HoldInTrust { get; set; } = string.Empty;
@@ -55,7 +55,7 @@ namespace Umbraco13.Models
         public decimal NavPrice { get; set; }
 
         [JsonPropertyName("marketPrice")]
-        public decimal MarketPrice { get; set; }
+        public decimal? MarketPrice { get; set; }
 
         [JsonPropertyName("navDate")]
         public DateTime NavDate { get; set; }
