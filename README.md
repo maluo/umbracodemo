@@ -8,11 +8,14 @@ A web application built with Umbraco CMS v13 for managing and displaying investm
 - **Historical NAV Data**: Track Net Asset Value history with interactive charts
 - **Data Visualization**: SVG bar charts aligned with tabular data
 - **Export Functionality**:
-  - PDF export with customizable formatting
-  - Excel export with auto-sized columns
+  - PDF export with customizable formatting, metadata, and height options
+  - Excel export with auto-sized columns, rich text formatting, and border options
+- **Download Security**: Token-based download authentication with auto-refresh
+- **Performance**: In-memory caching of funds.json data using MediaFileManager
 - **Responsive Design**: Mobile-friendly interface
 - **Multi-line Headers**: Support for complex report headers
 - **Bold Text Markup**: Use `**text**` for bold formatting in exports
+- **ViewComponents**: Modular, reusable components for funds, tables, and navigation history
 
 ## Tech Stack
 
@@ -42,17 +45,28 @@ A web application built with Umbraco CMS v13 for managing and displaying investm
 
 ```
 Umbraco13/
-├── Controllers/          # API controllers
-├── Models/              # View models and data models
-├── Services/            # Business logic services
+├── Controllers/              # API controllers
+├── Models/                   # View models and data models
+├── Services/                 # Business logic services
 │   ├── PdfExportService.cs
 │   ├── ExcelExportService.cs
-│   └── ...
-├── Views/               # Razor views
+│   ├── FundsJsonService.cs           # In-memory funds.json caching
+│   ├── NavHistoryService.cs          # Navigation history management
+│   ├── DownloadTokenService.cs       # Token-based download security
+│   ├── FundService.cs
+│   └── FundHistoricalNavService.cs
+├── ViewComponents/           # Reusable view components
+│   ├── FundsTableViewComponent.cs
+│   ├── FundsJsonViewComponent.cs
+│   ├── HistoricalNavTableViewComponent.cs
+│   └── NavHistoryViewComponent.cs
+├── Helpers/                  # Helper utilities
+│   └── FundTableConverter.cs
+├── Views/                    # Razor views
 │   └── Shared/
 │       └── Components/
-├── wwwroot/             # Static assets
-└── appsettings.json     # Configuration
+├── wwwroot/                  # Static assets
+└── appsettings.json          # Configuration
 ```
 
 ## Usage
@@ -76,10 +90,57 @@ var pdfBytes = _pdfExportService.ExportToPdf(data, columns, options);
 var options = new ExcelExportOptions
 {
     ReportTitle = "Fund Data Export",
-    Disclaimer = "**Confidential** - For internal use only."
+    Disclaimer = "**Confidential** - For internal use only.",
+    AutoSizeColumns = true,
+    EnableRichTextFormatting = true
 };
 
 var excelBytes = _excelExportService.ExportToExcel(data, columns, options);
+```
+
+### Funds JSON Service (In-Memory Caching)
+
+```csharp
+// Automatically loads funds.json at startup and caches in memory
+var fundsData = _fundsJsonService.GetFundsData();
+
+// Retrieve NAV history for a specific fund
+var navHistory = _fundsJsonService.GetNavHistory("TICKER123");
+```
+
+### Navigation History Service
+
+```csharp
+// Get historical NAV data for a fund ticker
+var history = await _navHistoryService.GetNavHistoryAsync("TICKER123");
+
+foreach (var entry in history)
+{
+    Console.WriteLine($"{entry.Date}: NAV={entry.NavPrice}, Market={entry.MarketPrice}");
+}
+```
+
+### Download Token Service
+
+```csharp
+// Generate a secure token for PDF download (valid for 30 minutes)
+var pdfToken = _downloadTokenService.GenerateDownloadToken("pdf");
+
+// Validate token before allowing download
+var isValid = _downloadTokenService.ValidateDownloadToken(token, "pdf");
+if (isValid)
+{
+    // Proceed with download
+}
+```
+
+### ViewComponents
+
+```csharp
+// Invoke in Razor views
+@await Component.InvokeAsync("FundsTable", new { tickerCode = "TICKER123" })
+@await Component.InvokeAsync("NavHistory", new { tickerCode = "TICKER123" })
+@await Component.InvokeAsync("FundsJson")
 ```
 
 ## License
@@ -125,9 +186,29 @@ SOFTWARE.
 
 ## Documentation
 
-For detailed usage documentation, see:
-- [PDF Export Service Guide](pdf_export_service_usage.md)
-- [Historical NAV Table Feature](HistoricalNavPivotedTable_2026-01-31.md)
+For detailed implementation documentation, see the `notes/` folder:
+
+### Core Services
+- [Funds JSON Service](notes/refactoring/Refactor-FundsJsonService-to-use-MediaFileManager_2025-02-15.md) - In-memory caching with MediaFileManager
+- [Navigation History Service](notes/features/navigation/NavHistory-Integration-2026-02-14.md) - NAV data management
+- [Download Token Service](notes/configuration/auth.md) - Secure token-based downloads
+
+### Export Features
+- [PDF Export Service Guide](notes/pdf-features/pdf_export_service_usage.md)
+- [PDF Metadata Feature](notes/pdf-features/PDFMetadataFeature-2026-02-08.md)
+- [PDF Height Options](notes/pdf-features/PDFExportLastRowAndHeightOptions-2026-02-06.md)
+- [Excel Rich Text Formatting](notes/excel-export/ExcelPartialRichTextFormatting-2026-02-07.md)
+- [Excel Export Height Options](notes/excel-export/ExcelExportHeightOptions-2026-02-06.md)
+
+### Features & Components
+- [Historical NAV Table](notes/features/navigation/HistoricalNavPivotedTable_2026-01-31.md) - Pivoted table layout
+- [Dynamic Table Sorting & Pagination](notes/features/tables/dynamic_table_sorting_pagination.md)
+- [Highcharts Integration](notes/features/charts/Highcharts507NavChart-2026-02-08.md) - Interactive charts
+- [Border Options for Sections](notes/features/tables/BorderOptionsForSections-2026-02-06.md)
+
+### Configuration
+- [Git Configuration](notes/configuration/Update%20Git%20Configuration%202026-02-05.md)
+- [Umbraco 13 Git Conflict Resolution](notes/configuration/Git_Conflict_Resolution_Umbraco13_2026-02-05.md)
 
 ## Support
 
