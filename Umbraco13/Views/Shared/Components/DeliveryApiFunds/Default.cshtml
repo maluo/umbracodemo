@@ -1,0 +1,48 @@
+@model List<Umbraco13.Models.FundJsonItem>
+
+@{
+    ViewData["Title"] = "Delivery API Funds";
+}
+
+<div class="delivery-api-funds-container mb-4">
+    <h3>Funds from Delivery API</h3>
+
+    @if (Model != null && Model.Count > 0)
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Fund Name</th>
+                        <th>Ticker Code</th>
+                        <th>NAV Price</th>
+                        <th>Market Price</th>
+                        <th>Hold In Trust</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var fund in Model)
+                    {
+                        <tr>
+                            <td><strong>@fund.FundName</strong></td>
+                            <td><code>@fund.TickerCode</code></td>
+                            <td>@fund.NavPrice.ToString("F4")</td>
+                            <td>@fund.MarketPrice.ToString("F4")</td>
+                            <td>@fund.HoldInTrust</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-info mt-3">
+            <strong>Total Funds:</strong> @Model.Count
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning" role="alert">
+            No funds data available from Delivery API.
+        </div>
+    }
+</div>
