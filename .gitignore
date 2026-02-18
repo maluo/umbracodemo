@@ -483,3 +483,6 @@ appsettings-schema.*.json
 Umbraco13/AppData/download-tokens.json
 Umbraco13/AppData/*.json
 Umbraco13/AppData/download-tokens.json
+
+# Windows NUL file
+nul
