@@ -486,3 +486,8 @@ Umbraco13/AppData/download-tokens.json
 
 # Windows NUL file
 nul
+# OpenCode configuration files (contain secrets and personal data)
+**/antigravity-accounts.json
+**/antigravity.json
+**/oh-my-opencode.json
+**/opencode.json
