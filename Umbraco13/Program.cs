@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Umbraco.Cms.Web.Common.Routing;
@@ -10,9 +11,22 @@ using Umbraco13.Fonts;
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Configure Umbraco request options to handle /funds routes as server-side requests
+// but exclude API endpoints (routes with hyphens like download-tokens, exporttohtmlpdf, etc.)
 builder.Services.Configure<UmbracoRequestOptions>(options =>
 {
-    options.HandleAsServerSideRequest = httpRequest => httpRequest.Path.StartsWithSegments("/funds");
+    options.HandleAsServerSideRequest = httpRequest =>
+    {
+        var path = httpRequest.Path;
+        // Only handle /funds without API-like paths (exclude paths containing hyphens)
+        if (path.StartsWithSegments("/funds"))
+        {
+            // Exclude API endpoints - these typically contain hyphens (download-tokens, exporttohtmlpdf, token-version, etc.)
+            // Or are specifically for data export
+            var pathValue = path.Value ?? string.Empty;
+            return !pathValue.Contains("-") && !pathValue.Contains("export") && !pathValue.Contains("tokens");
+        }
+        return false;
+    };
 });
 
 builder.Services.AddDbContext<Umbraco13.Data.AppDbContext>(options =>
@@ -25,6 +39,8 @@ builder.Services.AddScoped<Umbraco13.Services.IPdfExportService, Umbraco13.Servi
 builder.Services.AddScoped<Umbraco13.Services.IExcelExportService, Umbraco13.Services.ExcelExportService>();
 builder.Services.AddScoped<Umbraco13.Services.INavHistoryService, Umbraco13.Services.NavHistoryService>();
 builder.Services.AddSingleton<Umbraco13.Services.IFundsJsonService, Umbraco13.Services.FundsJsonService>();
+    builder.Services.AddScoped<Umbraco13.Services.IHtmlPdfPrintService, Umbraco13.Services.HtmlPdfPrintService>();
+builder.Services.AddScoped<Umbraco13.Services.IHtmlToPdfConverter, Umbraco13.Services.PdfSharpHtmlConverter>();
 
 builder.Services.AddHttpClient();
 

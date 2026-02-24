@@ -50,7 +50,8 @@ public class FundsController : UmbracoController
             csv = _downloadTokenService.GenerateDownloadToken("csv"),
             excel = _downloadTokenService.GenerateDownloadToken("excel-free"),
             excelEpPlus = _downloadTokenService.GenerateDownloadToken("excel"),
-            excelGeneric = _downloadTokenService.GenerateDownloadToken("excel-generic")
+            excelGeneric = _downloadTokenService.GenerateDownloadToken("excel-generic"),
+            htmlPdf = _downloadTokenService.GenerateDownloadToken("html-pdf")
         });
     }
 

@@ -7,6 +7,12 @@
 <div id="funds-table-container" style="margin: 40px auto 0 auto; width: 70%; max-width: 100%;">
     <!-- Download Buttons -->
     <div style="margin-bottom: 15px; text-align: right;">
+        <a href="#" id="download-html-pdf" class="btn btn-secondary" style="text-decoration: none; margin-right: 10px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf" viewBox="0 0 16 16" style="margin-right:5px; vertical-align: text-bottom;">
+                <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+            </svg>
+            Download HTML PDF
+        </a>
         <a href="#" id="download-pdf" class="btn btn-danger" style="text-decoration: none; margin-right: 10px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf" viewBox="0 0 16 16" style="margin-right: 5px; vertical-align: text-bottom;">
                 <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
@@ -167,6 +173,7 @@ function updateDownloadLinks(tokens) {
     document.getElementById('download-excel-free').href = '/funds/exporttoexcel-free?token=' + tokens.excel;
     document.getElementById('download-excel-epplus').href = '/funds/exporttoexcel?token=' + tokens.excelEpPlus;
     document.getElementById('download-excel-generic').href = '/funds/exporttoexcel-generic?token=' + tokens.excelGeneric;
+    document.getElementById('download-html-pdf').href = '/funds/exporttohtmlpdf?token=' + tokens.htmlPdf;
 
     // Update historical NAV download links if they exist
     const histPdfLink = document.getElementById('download-hist-pdf');
