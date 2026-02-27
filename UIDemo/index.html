@@ -1,7 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Demo – Gallery</title>
+    <link rel="stylesheet" href="site.css">
     <style>
         figure {
             margin: 0;
@@ -11,44 +15,57 @@
         img {
             width: 100%;
             display: block;
+            border-radius: 4px;
         }
 
         .gradient-border {
             width: 50%;
             position: relative;
-            margin: 0 auto;
+            margin: 0 auto 24px;
         }
 
         .gradient-border::before {
             content: "";
             position: absolute;
             z-index: -1;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
+            top: -3px;
+            left: -3px;
+            bottom: -3px;
+            right: -3px;
             background-image: linear-gradient(#1a1a1a, #1560bd);
+            border-radius: 6px;
         }
     </style>
-    <!-- <script src="index.js"></script> -->
-    <!-- <link rel="stylesheet" href="site.css"> -->
 </head>
 
-</html>
-
 <body>
-    <!-- <div class="curtain">
+    <!-- Curtain Effect Section -->
+    <div class="curtain">
         <div class="invert">
             <h2>Curtain Effect</h2>
         </div>
-    </div> -->
-    @foreach(var item in Model.Galery)
-    {
+    </div>
+
+    <!-- Gallery Section -->
     <div class="gradient-border">
         <figure>
-            <img src="@item.MediaUrl()" alt="@item.Name">
+            <img src="https://picsum.photos/seed/gallery1/800/450" alt="Gallery Image 1">
         </figure>
     </div>
-    }
 
+    <div class="gradient-border">
+        <figure>
+            <img src="https://picsum.photos/seed/gallery2/800/450" alt="Gallery Image 2">
+        </figure>
+    </div>
+
+    <div class="gradient-border">
+        <figure>
+            <img src="https://picsum.photos/seed/gallery3/800/450" alt="Gallery Image 3">
+        </figure>
+    </div>
+
+    <script src="index.js"></script>
 </body>
+
+</html>

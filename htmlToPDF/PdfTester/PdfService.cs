@@ -1,12 +1,13 @@
-using PdfSharpCore.Pdf;
-using PdfSharpCore.Drawing;
+using PdfSharp.Pdf;
+using PdfSharp.Drawing;
+using PdfSharp;
 using System.Reflection;
 using System.Linq;
 
 namespace PdfTester;
 
 /// <summary>
-/// PDF Generation Service - Converts generic list of objects to PDF using PdfSharpCore
+/// PDF Generation Service - Converts generic list of objects to PDF using PdfSharp
 /// </summary>
 public class PdfService
 {
@@ -66,7 +67,7 @@ public class PdfService
 }
 
 /// <summary>
-/// Generic PDF document implementation using PdfSharpCore
+/// Generic PDF document implementation using PdfSharp
 /// </summary>
 internal class GenericPdfDocument<T>
 {
@@ -114,7 +115,7 @@ internal class GenericPdfDocument<T>
         for (int pageIndex = 0; pageIndex < totalPages; pageIndex++)
         {
             var page = document.AddPage();
-            page.Size = PdfSharpCore.PageSize.A4;
+            page.Size = PdfSharp.PageSize.A4;
             page.Width = PageWidth;
             page.Height = PageHeight;
 
@@ -157,7 +158,8 @@ internal class GenericPdfDocument<T>
 
     private int CalculateRowsPerPage()
     {
-        var availableHeight = PageHeight - MarginTop - MarginBottom - 100; // Reserve space for header/disclaimer
+        // Reserve space for header (100), disclaimer (50), and footer (20)
+        var availableHeight = PageHeight - MarginTop - MarginBottom - 170;
         var rowHeight = _options.TableFontSize + 10; // Row height with padding
         return (int)(availableHeight / rowHeight);
     }
@@ -204,23 +206,23 @@ internal class GenericPdfDocument<T>
         if (isFirstPage || startYPos > yPos)
         {
             double xPos = MarginLeft;
-            var headerRect = new XRect(xPos, yPos, colWidths[0], 25);
+            var headerRect = new XRect(xPos, yPos, colWidths[0], 20);
             graphics.DrawRectangle(XBrushes.LightGray, headerRect);
             DrawCellBorder(graphics, headerRect);
             graphics.DrawString("Row #", headerFont, XBrushes.Black,
-                new XRect(xPos + CellPadding, yPos, colWidths[0] - CellPadding, 25), XStringFormats.CenterLeft);
+                new XRect(xPos + CellPadding, yPos, colWidths[0] - CellPadding, 20), XStringFormats.CenterLeft);
             xPos += colWidths[0];
 
             for (int i = 0; i < _properties.Count; i++)
             {
-                var cellRect = new XRect(xPos, yPos, colWidths[i + 1], 25);
+                var cellRect = new XRect(xPos, yPos, colWidths[i + 1], 20);
                 graphics.DrawRectangle(XBrushes.LightGray, cellRect);
                 DrawCellBorder(graphics, cellRect);
                 graphics.DrawString(_properties[i].Name, headerFont, XBrushes.Black,
-                    new XRect(xPos + CellPadding, yPos, colWidths[i + 1] - CellPadding, 25), XStringFormats.CenterLeft);
+                    new XRect(xPos + CellPadding, yPos, colWidths[i + 1] - CellPadding, 20), XStringFormats.CenterLeft);
                 xPos += colWidths[i + 1];
             }
-            yPos += 25;
+            yPos += 20;
         }
 
         // Draw table rows
@@ -278,7 +280,7 @@ internal class GenericPdfDocument<T>
     private void AddPageNumber(XGraphics graphics, int pageNum, int totalPages)
     {
         var font = new XFont("Arial", 9, XFontStyle.Regular);
-        var text = $"Page {pageNum} of {totalPages}";
+        var text = $"page {pageNum} of {totalPages}";
         var width = graphics.MeasureString(text, font).Width;
         graphics.DrawString(text, font, XBrushes.Gray,
             new XRect((PageWidth - width) / 2, PageHeight - MarginBottom + 10, width, 20),
