@@ -178,10 +178,10 @@ internal class Program
 
         var columns6 = new List<PdfColumnDefinition>
         {
-            new() { PropertyName = "Description", HeaderText = "Detailed Description", Width = 400, Alignment = XStringAlignment.Near },
-            new() { PropertyName = "Category", HeaderText = "Category", Width = 120, Alignment = XStringAlignment.Center },
-            new() { PropertyName = "Priority", HeaderText = "Priority", Width = 80, Alignment = XStringAlignment.Center },
-            new() { PropertyName = "Status", HeaderText = "Status", Width = 100, Alignment = XStringAlignment.Center }
+            new() { PropertyName = "Description", HeaderText = "Description", Width = 280, Alignment = XStringAlignment.Near },
+            new() { PropertyName = "Category", HeaderText = "Category", Width = 80, Alignment = XStringAlignment.Center },
+            new() { PropertyName = "Priority", HeaderText = "Priority", Width = 60, Alignment = XStringAlignment.Center },
+            new() { PropertyName = "Status", HeaderText = "Status", Width = 70, Alignment = XStringAlignment.Center }
         };
 
         var options6 = new PdfExportOptions
@@ -190,19 +190,19 @@ internal class Program
             ReportTitle = "Task Description Report",
             HeaderLines = new List<string>
             {
-                "Project: **System Documentation Project**",
+                "Project: System Documentation Project",
                 "Report Date: " + DateTime.Now.ToString("MMMM dd, yyyy"),
                 "Showing detailed descriptions with custom column widths"
             },
             DisclaimerLines = new List<string>
             {
                 "",
-                "This report demonstrates **custom column width specification**.",
-                "The first column has a fixed width of 400 units for long descriptions.",
+                "This report demonstrates custom column width specification.",
+                "The first column has a fixed width of 280 units for long descriptions.",
                 "Other columns have smaller fixed widths as appropriate."
             },
             Author = "Documentation Team",
-            TableMinimalWidthPixels = 700,
+            TableMinimalWidthPixels = 490,
             ShowHeadingBorders = true
         };
 
@@ -311,16 +311,16 @@ internal class Program
         var tasks = new List<TaskDescription>();
         string[] longDescriptions = new[]
         {
-            "Implement comprehensive user authentication system with multi-factor support, password reset functionality, and session management for enterprise application.",
-            "Design and develop RESTful API endpoints for all user management operations including CRUD operations, search functionality, and bulk import/export features.",
-            "Create detailed technical documentation for the entire system architecture, covering database schemas, API specifications, security protocols, and deployment procedures.",
-            "Optimize database query performance by implementing proper indexing strategies, query optimization techniques, and caching mechanisms for high-volume data access.",
-            "Develop automated testing suite covering unit tests, integration tests, and end-to-end tests to ensure system reliability and prevent regression issues.",
-            "Implement real-time data synchronization across multiple client devices using WebSocket connections and conflict resolution algorithms.",
-            "Build responsive user interface components with comprehensive accessibility support and localization for multiple languages and regions.",
-            "Set up continuous integration and deployment pipeline with automated testing, code quality checks, and deployment to multiple environments.",
-            "Conduct security audit and implement necessary security measures including input validation, SQL injection prevention, and XSS protection.",
-            "Design and implement scalable microservices architecture with proper service discovery, load balancing, and fault tolerance mechanisms."
+            "Implement comprehensive user authentication system with multi-factor support and password reset functionality.",
+            "Design RESTful API endpoints for user management including CRUD operations and search functionality.",
+            "Create detailed technical documentation for system architecture, database schemas, and API specifications.",
+            "Optimize database query performance by implementing indexing strategies and caching mechanisms.",
+            "Develop automated testing suite covering unit tests, integration tests, and end-to-end tests.",
+            "Implement real-time data synchronization across multiple client devices using WebSocket connections.",
+            "Build responsive user interface components with accessibility support and localization.",
+            "Set up continuous integration and deployment pipeline with automated testing and code quality checks.",
+            "Conduct security audit implementing input validation, SQL injection prevention, and XSS protection.",
+            "Design scalable microservices architecture with service discovery and load balancing."
         };
 
         for (int i = 1; i <= count; i++)
