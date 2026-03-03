@@ -41,6 +41,11 @@ public class PdfColumnDefinition
     public XStringAlignment Alignment { get; set; } = XStringAlignment.Center;
 
     /// <summary>
+    /// Alignment for the header text of this column (default: Center). If not set, uses Alignment value.
+    /// </summary>
+    public XStringAlignment? HeaderAlignment { get; set; }
+
+    /// <summary>
     /// Calculate and show average for this column in summary row (only for numeric types)
     /// </summary>
     public bool ShowAverage { get; set; }
@@ -313,10 +318,7 @@ public class PdfExportService : IPdfExportService
         double headerHeight = DrawPageHeader(page, gfx, options, font, fontHeader, tableWidth, tableLeftX);
         // Table starts immediately after header (no gap)
         var firstPageTableTop = headerHeight;
-        DrawTableHeader(gfx, firstPageTableTop, tableLeftX, columnWidths, columns, fontBold, options);
-
-        // Data Rows
-        double yPos = firstPageTableTop + options.RowHeight;
+        double yPos = DrawTableHeader(gfx, firstPageTableTop, tableLeftX, columnWidths, columns, fontBold, options);
 
         for (int i = 0; i < dataList.Count; i++)
         {
@@ -343,8 +345,7 @@ public class PdfExportService : IPdfExportService
 
                 // Table starts closer to top on continuation pages
                 yPos = 50;
-                DrawTableHeader(gfx, yPos, tableLeftX, columnWidths, columns, fontBold, options);
-                yPos += options.RowHeight;
+                yPos = DrawTableHeader(gfx, yPos, tableLeftX, columnWidths, columns, fontBold, options);
             }
 
         }
@@ -639,8 +640,13 @@ public class PdfExportService : IPdfExportService
         {
             foreach (var line in options.HeaderLines)
             {
-                DrawFormattedText(gfx, line, tableLeftX + HeaderPadding, yPos, tableWidth - HeaderPadding, headerLineHeight, font, fontHeader, XBrushes.Black, XStringAlignment.Near);
-                yPos += headerLineHeight;
+                // Split by \r\n for multi-line display within a single header line
+                var subLines = line.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                foreach (var subLine in subLines)
+                {
+                    DrawFormattedText(gfx, subLine, tableLeftX + HeaderPadding, yPos, tableWidth - HeaderPadding, headerLineHeight, font, fontHeader, XBrushes.Black, XStringAlignment.Near);
+                    yPos += headerLineHeight;
+                }
             }
         }
 
@@ -658,8 +664,9 @@ public class PdfExportService : IPdfExportService
 
     /// <summary>
     /// Draw table header row with Excel-like grid style
+    /// Returns the Y position after the header row
     /// </summary>
-    private void DrawTableHeader(
+    private double DrawTableHeader(
         XGraphics gfx,
         double yPos,
         double tableLeftX,
@@ -671,16 +678,59 @@ public class PdfExportService : IPdfExportService
         var pen = new XPen(XColors.Black, 0.5); // Black border for Excel-like style
         var brushHeader = new XSolidBrush(XColor.FromArgb(217, 217, 217)); // Light gray header
 
+        // Calculate max number of lines across all headers (for multi-line support with \r\n)
+        int maxLines = 1;
+        foreach (var col in columns)
+        {
+            var lines = col.HeaderText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            maxLines = Math.Max(maxLines, lines.Length);
+        }
+
+        // Calculate header row height based on number of lines
+        double headerRowHeight = options.RowHeight * maxLines;
+        double lineHeight = options.RowHeight;
+
         double xPos = tableLeftX;
 
         for (int i = 0; i < columns.Count; i++)
         {
             var width = columnWidths[i];
-            gfx.DrawRectangle(pen, brushHeader, xPos, yPos, width, options.RowHeight);
-            gfx.DrawString(columns[i].HeaderText, fontBold, XBrushes.Black,
-                new XRect(xPos, yPos, width, options.RowHeight), XStringFormats.Center);
+            var headerText = columns[i].HeaderText;
+
+            // Draw the header cell background
+            gfx.DrawRectangle(pen, brushHeader, xPos, yPos, width, headerRowHeight);
+
+            // Split by \r\n for multi-line display
+            var lines = headerText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+            // Calculate starting Y to center the text block vertically
+            double textBlockHeight = lines.Length * lineHeight;
+            double currentY = yPos + (headerRowHeight - textBlockHeight) / 2;
+
+            // Draw each line of the header text
+            // Use HeaderAlignment if set, otherwise fall back to Alignment, default to Center
+            var headerAlignment = columns[i].HeaderAlignment ?? columns[i].Alignment;
+            var stringFormat = headerAlignment switch
+            {
+                XStringAlignment.Near => XStringFormats.CenterLeft,
+                XStringAlignment.Far => XStringFormats.CenterRight,
+                _ => XStringFormats.Center
+            };
+
+            foreach (var line in lines)
+            {
+                if (!string.IsNullOrEmpty(line))
+                {
+                    gfx.DrawString(line, fontBold, XBrushes.Black,
+                        new XRect(xPos, currentY, width, lineHeight), stringFormat);
+                }
+                currentY += lineHeight;
+            }
+
             xPos += width;
         }
+
+        return yPos + headerRowHeight;
     }
 
     /// <summary>
@@ -709,7 +759,8 @@ public class PdfExportService : IPdfExportService
 
             gfx.DrawRectangle(pen, brushWhite, xPos, yPos, width, options.RowHeight);
 
-            var format = columns[i].Alignment;
+            // Use HeaderAlignment if set, otherwise fall back to Alignment (follows header alignment)
+            var format = columns[i].HeaderAlignment ?? columns[i].Alignment;
             if (format == XStringAlignment.Center)
             {
                 gfx.DrawString(text, font, XBrushes.Black,
@@ -907,8 +958,13 @@ public class PdfExportService : IPdfExportService
         {
             foreach (var line in options.DisclaimerLines)
             {
-                DrawFormattedText(gfx, line, tableLeftX + DisclaimerPadding, yPos, tableWidth - DisclaimerPadding, disclaimerLineHeight, fontFooter, fontBold, XBrushes.Black, XStringAlignment.Near);
-                yPos += disclaimerLineHeight;
+                // Split by \r\n for multi-line display within a single disclaimer line
+                var subLines = line.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                foreach (var subLine in subLines)
+                {
+                    DrawFormattedText(gfx, subLine, tableLeftX + DisclaimerPadding, yPos, tableWidth - DisclaimerPadding, disclaimerLineHeight, fontFooter, fontBold, XBrushes.Black, XStringAlignment.Near);
+                    yPos += disclaimerLineHeight;
+                }
             }
         }
 
