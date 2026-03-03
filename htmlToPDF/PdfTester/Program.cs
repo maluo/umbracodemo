@@ -110,10 +110,10 @@ internal class Program
 
             var columns = new List<PdfColumnDefinition>
             {
-                new() { PropertyName = "SecurityName", HeaderText = "Security Name", Alignment = XStringAlignment.Near },
-                new() { PropertyName = "SecurityIdentifier", HeaderText = "Security Identifier", Alignment = XStringAlignment.Near },
-                new() { PropertyName = "PortfolioWeighting", HeaderText = "Portfolio Weighting", Alignment = XStringAlignment.Near, Format = "F2" },
-                new() { PropertyName = "NumberOfShares", HeaderText = "Number of Shares", Alignment = XStringAlignment.Near, Format = "N0" }
+                new() { PropertyName = "asdfsadf", HeaderText = "adsfasdf", Width = 280, HeaderAlignment = XStringAlignment.Near },
+                new() { PropertyName = "asdfsadf", HeaderText = "asdfa \r\n asdfa", Width = 100, HeaderAlignment = XStringAlignment.Center },
+                new() { PropertyName = "asdfsadf", HeaderText = "asdfsadf \r\n asdf as d", Width = 80, HeaderAlignment = XStringAlignment.Center, Format = "F2" },
+                new() { PropertyName = "asdfsadf", HeaderText = "asdfsadf\r\nasdfsadf", Width = 90, HeaderAlignment = XStringAlignment.Far, Format = "N0" }
             };
 
                 // Configure export options
@@ -121,30 +121,13 @@ internal class Program
                 {
                     ItemsPerPage = 92,
                     HeaderLines = new List<string> {
-                    $"List of Portfolio Holdings",
+                    $"List of Portfolio Holdings\r\nAs of {DateTime.Now:MMMM dd, yyyy}",
                 },
                     DisclaimerLines = new List<string> {
-                    "",
-                    "Portfolio holdings are subject to change and should not be considered a recommendation to buy or",
-                    "sell individual securities.",
-                    "",
-                    "**Investors should carefully consider investment objectives, risks, charges and expenses.**",
-                    "**This and other important information is contained in the fund prospectus which should be**",
-                    "**considered carefully before investing. Click here to obtainthe prospectus or call 888.622.1813.**",
-                    "",
-                    "Past performance is not a guarantee of future results. All data is in U.S. dollars unless otherwise noted. The",
-                    "Fund invests ingold and other precious metals, which involves additional and special risks, such as the",
-                    "possibility for substantial pricefluctuations over a short period of time; the market for gold/precious metals",
-                    "is relatively limited; the sources of gold/preciousmetals are concentrated in countries that have the potential",
-                    "for instability; and the market for gold/precious metals isunregulated. The Fund may also invest in foreign",
-                    "securities, which are subject to special risks including: differences inaccounting methods; the value of foreign",
-                    "currencies may decline relative to the U.S. dollar; a foreign government mayexpropriate the Fund’s assets; and",
-                    "political, social or economic instability in a foreign country in which the Fund invests maycause the value of",
-                    "the Fund’s investments to decline. The Fund is non-diversified, meaning it may concentrate its assets infewer",
-                    "individual holdings than a diversified fund. Therefore, the Fund is more exposed to individual stock volatility",
-                    "than adiversified fund."
-                    ,"",
-                    $"© {DateTime.Now.Year} Sprott Inc. All rights reserved."
+                    "sdafsadfa",
+                    "**sadfsadfasdf**",
+                    "asdfasdfa",
+                    $"© {DateTime.Now.Year} test test@inc. All rights reserved."
                 },
 
                     LastRow = new PdfLastRowDefinition
@@ -157,14 +140,14 @@ internal class Program
                         ""
                     },
                     },
-                    Author = "Sprott Inc.",
+                    Author = "sadfsadf",
                     ShowHeadingBorders = true,
                     ShowDisclaimerBorders = true,
                     HeadingHeightPixels = 20,
                     TableMinimalWidthPixels = 220
                 };
                 
-                options.ReportTitle = $"Sprott Focus Trust (FUND)";
+                options.ReportTitle = $"Test Financial Report";
                 
                 options.DocumentTitle = options.ReportTitle;
 
@@ -172,53 +155,14 @@ internal class Program
         File.WriteAllBytes("output_funds_export.pdf", exportedPdf);
         Console.WriteLine($"✓ Generated: output_funds_export.pdf ({new FileInfo("output_funds_export.pdf").Length} bytes)");
 
-        // Test 6: Custom column widths with long text in first column
-        Console.WriteLine("\n[Test 6] Testing custom column widths with long text...");
-        var descriptions = GenerateDescriptions(20);
-
-        var columns6 = new List<PdfColumnDefinition>
-        {
-            new() { PropertyName = "Description", HeaderText = "Description", Width = 280, Alignment = XStringAlignment.Near },
-            new() { PropertyName = "Category", HeaderText = "Category", Width = 80, Alignment = XStringAlignment.Center },
-            new() { PropertyName = "Priority", HeaderText = "Priority", Width = 60, Alignment = XStringAlignment.Center },
-            new() { PropertyName = "Status", HeaderText = "Status", Width = 70, Alignment = XStringAlignment.Center }
-        };
-
-        var options6 = new PdfExportOptions
-        {
-            ItemsPerPage = 25,
-            ReportTitle = "Task Description Report",
-            HeaderLines = new List<string>
-            {
-                "Project: System Documentation Project",
-                "Report Date: " + DateTime.Now.ToString("MMMM dd, yyyy"),
-                "Showing detailed descriptions with custom column widths"
-            },
-            DisclaimerLines = new List<string>
-            {
-                "",
-                "This report demonstrates custom column width specification.",
-                "The first column has a fixed width of 280 units for long descriptions.",
-                "Other columns have smaller fixed widths as appropriate."
-            },
-            Author = "Documentation Team",
-            TableMinimalWidthPixels = 490,
-            ShowHeadingBorders = true
-        };
-
-        var pdf6 = pdfExportService.ExportToPdf(descriptions, columns6, options6);
-        File.WriteAllBytes("output_custom_widths.pdf", pdf6);
-        Console.WriteLine($"✓ Generated: output_custom_widths.pdf ({new FileInfo("output_custom_widths.pdf").Length} bytes)");
-
         Console.WriteLine("\n" + new string('=', 50));
         Console.WriteLine("All PDF generation tests completed successfully!");
-        Console.WriteLine($"Total files generated: 5");
+        Console.WriteLine($"Total files generated: 4");
         Console.WriteLine("File locations:");
         Console.WriteLine($"  - output_employees.pdf");
         Console.WriteLine($"  - output_products.pdf");
         Console.WriteLine($"  - output_students.pdf");
-        Console.WriteLine($"  - output_funds_export.pdf (migrated service)");
-        Console.WriteLine($"  - output_custom_widths.pdf (custom column widths)");
+        Console.WriteLine($"  - output_funds_export.pdf (with custom column widths)");
     }
 
     // Helper methods to generate test data
@@ -284,57 +228,27 @@ internal class Program
 
     static List<Fund> GenerateFunds(int count)
     {
-        string[] trustOptions = { "Yes", "No", "Partial" };
         var funds = new List<Fund>();
         var random = new Random(42); // Fixed seed for reproducibility
+        string[] sectors = { "Technology", "Healthcare", "Finance", "Energy", "Consumer", "Industrials" };
+        string[] identifiers = { "US12345678", "US87654321", "US11223344", "US99887766", "US55443322", "US66778899" };
 
         for (int i = 1; i <= count; i++)
         {
+            double weighting = random.NextDouble() * 5.0; // Random 0-5%
+            int shares = random.Next(100, 10000);
+
             funds.Add(new Fund
             {
-                FundName = $"Fund {i} - {(i % 3 == 0 ? "Growth" : i % 2 == 0 ? "Value" : "Balanced")}",
-                TickerCode = $"FND{i:D3}",
-                NavPrice = 10 + random.NextDouble() * 90,
-                MarketPrice = 10 + random.NextDouble() * 90,
-                HoldInTrust = trustOptions[i % trustOptions.Length]
+                SecurityName = $"{sectors[i % sectors.Length]} Select Fund - {i} {(i % 3 == 0 ? "Growth" : i % 2 == 0 ? "Value" : "Balanced")}",
+                SecurityIdentifier = identifiers[i % identifiers.Length] + (i % 100).ToString("D2"),
+                PortfolioWeighting = weighting,
+                NumberOfShares = shares
             });
         }
         return funds;
     }
 
-    static List<TaskDescription> GenerateDescriptions(int count)
-    {
-        string[] categories = { "Documentation", "Development", "Testing", "Deployment", "Maintenance" };
-        string[] priorities = { "High", "Medium", "Low" };
-        string[] statuses = { "Pending", "In Progress", "Completed", "Blocked" };
-
-        var tasks = new List<TaskDescription>();
-        string[] longDescriptions = new[]
-        {
-            "Implement comprehensive user authentication system with multi-factor support and password reset functionality.",
-            "Design RESTful API endpoints for user management including CRUD operations and search functionality.",
-            "Create detailed technical documentation for system architecture, database schemas, and API specifications.",
-            "Optimize database query performance by implementing indexing strategies and caching mechanisms.",
-            "Develop automated testing suite covering unit tests, integration tests, and end-to-end tests.",
-            "Implement real-time data synchronization across multiple client devices using WebSocket connections.",
-            "Build responsive user interface components with accessibility support and localization.",
-            "Set up continuous integration and deployment pipeline with automated testing and code quality checks.",
-            "Conduct security audit implementing input validation, SQL injection prevention, and XSS protection.",
-            "Design scalable microservices architecture with service discovery and load balancing."
-        };
-
-        for (int i = 1; i <= count; i++)
-        {
-            tasks.Add(new TaskDescription
-            {
-                Description = longDescriptions[(i - 1) % longDescriptions.Length] + $" (Task #{i})",
-                Category = categories[i % categories.Length],
-                Priority = priorities[i % priorities.Length],
-                Status = statuses[i % statuses.Length]
-            });
-        }
-        return tasks;
-    }
 }
 
 // Data models
@@ -370,17 +284,8 @@ public class Student
 
 public class Fund
 {
-    public string FundName { get; set; } = string.Empty;
-    public string TickerCode { get; set; } = string.Empty;
-    public double NavPrice { get; set; }
-    public double MarketPrice { get; set; }
-    public string HoldInTrust { get; set; } = string.Empty;
-}
-
-public class TaskDescription
-{
-    public string Description { get; set; } = string.Empty;
-    public string Category { get; set; } = string.Empty;
-    public string Priority { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
+    public string SecurityName { get; set; } = string.Empty;
+    public string SecurityIdentifier { get; set; } = string.Empty;
+    public double PortfolioWeighting { get; set; }
+    public int NumberOfShares { get; set; }
 }
