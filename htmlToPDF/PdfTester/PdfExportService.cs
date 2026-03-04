@@ -1,6 +1,6 @@
-using PdfSharp;
-using PdfSharp.Drawing;
-using PdfSharp.Pdf;
+using PdfSharpCore;
+using PdfSharpCore.Drawing;
+using PdfSharpCore.Pdf;
 using System.Reflection;
 
 namespace PdfTester;
