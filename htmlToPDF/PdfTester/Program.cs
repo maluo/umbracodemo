@@ -109,43 +109,50 @@ internal class Program
         var pdfExportService = new PdfExportService();
         var funds = GenerateFunds(40);
 
-        var columns = new List<PdfColumnDefinition>
-        {
-            new() { PropertyName = "FundName", HeaderText = "Fund Name", Alignment = XStringAlignment.Near },
-            new() { PropertyName = "TickerCode", HeaderText = "Ticker", Alignment = XStringAlignment.Center },
-            new() { PropertyName = "NavPrice", HeaderText = "NAV Price", Format = "F2", Alignment = XStringAlignment.Far },
-            new() { PropertyName = "MarketPrice", HeaderText = "Market Price", Format = "F2", Alignment = XStringAlignment.Far, ShowAverage = true },
-            new() { PropertyName = "HoldInTrust", HeaderText = "Hold In Trust", Alignment = XStringAlignment.Near }
-        };
+            var columns = new List<PdfColumnDefinition>
+            {
+                new() { PropertyName = "asdfsadf", HeaderText = "adsfasdf", Width = 280, HeaderAlignment = XStringAlignment.Near },
+                new() { PropertyName = "asdfsadf", HeaderText = "asdfa \r\n asdfa", Width = 100, HeaderAlignment = XStringAlignment.Center },
+                new() { PropertyName = "asdfsadf", HeaderText = "asdfsadf \r\n asdf as d", Width = 80, HeaderAlignment = XStringAlignment.Center, Format = "F2" },
+                new() { PropertyName = "asdfsadf", HeaderText = "asdfsadf\r\nasdfsadf", Width = 90, HeaderAlignment = XStringAlignment.Far, Format = "N0" }
+            };
 
-        var exportOptions = new PdfExportOptions
-        {
-            ReportTitle = "FUND SUMMARY REPORT",
-            HeaderLines = new List<string>
-            {
-                "Migrated from Umbraco13",
-                "This report provides a summary of all funds including their NAV and market prices."
-            },
-            DisclaimerLines = new List<string>
-            {   
-                "",
-                "This document is **confidential** and intended for internal use only.",
-                "This document is **confidential** and intended for internal use only2."
-            },
-            ShowAverageRow = false,
-            ItemsPerPage = 80,
-            ShowHeadingBorders = true,
-            ShowDisclaimerBorders = true,
-            LastRow = new PdfLastRowDefinition
-            {
-                CellValues = new List<string>
+                // Configure export options
+                var options = new PdfExportOptions
                 {
-                    "Total","","","100",""
-                }
-            }
-        };
+                    ItemsPerPage = 92,
+                    HeaderLines = new List<string> {
+                    $"List of Portfolio Holdings\r\nAs of {DateTime.Now:MMMM dd, yyyy}",
+                },
+                    DisclaimerLines = new List<string> {
+                    "sdafsadfa",
+                    "**sadfsadfasdf**",
+                    "asdfasdfa",
+                    $"© {DateTime.Now.Year} test test@inc. All rights reserved."
+                },
 
-        var exportedPdf = pdfExportService.ExportToPdf(funds, columns, exportOptions);
+                    LastRow = new PdfLastRowDefinition
+                    {
+                        CellValues = new List<string>
+                    {
+                        "",
+                        "",
+                        " 100%",
+                        ""
+                    },
+                    },
+                    Author = "sadfsadf",
+                    ShowHeadingBorders = true,
+                    ShowDisclaimerBorders = true,
+                    HeadingHeightPixels = 20,
+                    TableMinimalWidthPixels = 220
+                };
+                
+                options.ReportTitle = $"Test Financial Report";
+                
+                options.DocumentTitle = options.ReportTitle;
+
+        var exportedPdf = pdfExportService.ExportToPdf(funds, columns, options);
         File.WriteAllBytes("output_funds_export.pdf", exportedPdf);
         Console.WriteLine($"✓ Generated: output_funds_export.pdf ({new FileInfo("output_funds_export.pdf").Length} bytes)");
 
@@ -156,7 +163,7 @@ internal class Program
         Console.WriteLine($"  - output_employees.pdf");
         Console.WriteLine($"  - output_products.pdf");
         Console.WriteLine($"  - output_students.pdf");
-        Console.WriteLine($"  - output_funds_export.pdf (migrated service)");
+        Console.WriteLine($"  - output_funds_export.pdf (with custom column widths)");
     }
 
     // Helper methods to generate test data
@@ -222,23 +229,27 @@ internal class Program
 
     static List<Fund> GenerateFunds(int count)
     {
-        string[] trustOptions = { "Yes", "No", "Partial" };
         var funds = new List<Fund>();
         var random = new Random(42); // Fixed seed for reproducibility
+        string[] sectors = { "Technology", "Healthcare", "Finance", "Energy", "Consumer", "Industrials" };
+        string[] identifiers = { "US12345678", "US87654321", "US11223344", "US99887766", "US55443322", "US66778899" };
 
         for (int i = 1; i <= count; i++)
         {
+            double weighting = random.NextDouble() * 5.0; // Random 0-5%
+            int shares = random.Next(100, 10000);
+
             funds.Add(new Fund
             {
-                FundName = $"Fund {i} - {(i % 3 == 0 ? "Growth" : i % 2 == 0 ? "Value" : "Balanced")}",
-                TickerCode = $"FND{i:D3}",
-                NavPrice = 10 + random.NextDouble() * 90,
-                MarketPrice = 10 + random.NextDouble() * 90,
-                HoldInTrust = trustOptions[i % trustOptions.Length]
+                SecurityName = $"{sectors[i % sectors.Length]} Select Fund - {i} {(i % 3 == 0 ? "Growth" : i % 2 == 0 ? "Value" : "Balanced")}",
+                SecurityIdentifier = identifiers[i % identifiers.Length] + (i % 100).ToString("D2"),
+                PortfolioWeighting = weighting,
+                NumberOfShares = shares
             });
         }
         return funds;
     }
+
 }
 
 // Data models
@@ -274,9 +285,8 @@ public class Student
 
 public class Fund
 {
-    public string FundName { get; set; } = string.Empty;
-    public string TickerCode { get; set; } = string.Empty;
-    public double NavPrice { get; set; }
-    public double MarketPrice { get; set; }
-    public string HoldInTrust { get; set; } = string.Empty;
+    public string SecurityName { get; set; } = string.Empty;
+    public string SecurityIdentifier { get; set; } = string.Empty;
+    public double PortfolioWeighting { get; set; }
+    public int NumberOfShares { get; set; }
 }
