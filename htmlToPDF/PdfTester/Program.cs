@@ -1,4 +1,5 @@
-using PdfSharp.Drawing;
+using PdfSharpCore.Drawing;
+using PdfSharpCore.Pdf;
 using System.Text;
 
 namespace PdfTester;
