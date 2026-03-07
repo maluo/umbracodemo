@@ -1,6 +1,6 @@
 # Claude Code Skills and Instincts
 
-This folder contains Claude Code skills and instincts specifically configured for Umbraco project.
+This folder contains Claude Code skills and instincts for various development tasks.
 
 ## Skills
 
@@ -45,10 +45,22 @@ Invoke with `/task_logger "Feature Name - YYYY-MM-DD"` after completing a featur
 - Enables SSH access through Tailscale
 - Displays Tailscale IP for remote connection
 - Provides phone setup instructions
-- Guides through connection testing
 
 **Usage:**
 Invoke with `/skill tailscale_setup` to start automated setup wizard.
+
+### 4. tailscale_remote_access
+**Simple iPhone remote access** to your development environment via Tailscale.
+
+**What It Does:**
+- Installs Tailscale on your Mac (if not installed)
+- Enables SSH access for secure remote connections
+- Displays your Tailscale IP for iPhone connection
+- Provides iPhone setup instructions
+- Shows all access methods (SSH, browser, remote desktop)
+
+**Usage:**
+Invoke with `/skill tailscale_remote_access` to configure Tailscale for iPhone remote access.
 
 ## Instincts
 
@@ -71,7 +83,9 @@ Located in `.claude/instincts/`:
 │   ├── umbraco-github-branch-workflow.md    # Branch workflow enforcement
 │   ├── task_logger/                          # Task logging skill
 │   │   └── SKILL.md
-│   └── tailscale_setup/                      # Tailscale setup skill
+│   ├── tailscale_setup/                      # Tailscale setup skill
+│   │   └── SKILL.md
+│   └── tailscale_remote_access/              # iPhone remote access skill
 │       └── SKILL.md
 ├── instincts/
 │   └── umbraco-branch-workflow.md            # Branch workflow instinct
@@ -90,9 +104,9 @@ For any feature development in this project:
 6. ✅ Create pull request for review
 
 For Tailscale setup:
-1. ✅ Invoke skill: `/skill tailscale_setup`
-2. ✅ Follow wizard prompts
-3. ✅ Complete phone setup
+1. ✅ Invoke skill: `/skill tailscale_setup` or `/skill tailscale_remote_access`
+2. ✅ Follow prompts to configure
+3. ✅ Complete iPhone setup from Tailscale app
 4. ✅ Test remote access
 5. ✅ **Log task**: `/task_logger "Tailscale Setup - 2026-03-06"`
 
@@ -102,7 +116,8 @@ For Tailscale setup:
 - Project-specific configurations take precedence over global configurations
 - All task logs are stored in `notes/` folder at project root
 - These skills ensure consistent development practices across the project
-- Tailscale setup skill provides complete automation for remote access configuration
+- Tailscale skills provide complete automation for remote access configuration
+- Works with any development environment (not tied to Umbraco project)
 
 ## Related Documentation
 
