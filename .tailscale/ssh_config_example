@@ -1,0 +1,20 @@
+# SSH Configuration for Tailscale
+# Add this to ~/.ssh/config
+
+# Tailscale Host Example
+Host opencode-mac
+    HostName 100.x.x.x
+    User luoma
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+    # Optional: Keep connection alive
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+# To use:
+# ssh opencode-mac
+
+# Port Forwarding Example
+# Forward local port 8080 to remote port 7269
+# ssh -L 8080:localhost:7269 opencode-mac
+# Then access http://localhost:8080 in browser
