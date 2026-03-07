@@ -1,6 +1,6 @@
 # Claude Code Skills and Instincts
 
-This folder contains Claude Code skills and instincts specifically configured for the Umbraco project.
+This folder contains Claude Code skills and instincts specifically configured for Umbraco project.
 
 ## Skills
 
@@ -30,6 +30,26 @@ The skill is automatically activated when Claude detects development work in thi
 **Usage:**
 Invoke with `/task_logger "Feature Name - YYYY-MM-DD"` after completing a feature.
 
+### 3. tailscale_setup
+**Automates Tailscale configuration** for OpenCode remote access from phone.
+
+**Capabilities:**
+- Automated Tailscale installation via Homebrew
+- SSH access enablement with validation
+- Phone setup guidance (iOS/Android)
+- Connection testing and troubleshooting
+- Server management for OpenCode
+
+**Output:**
+- Installs Tailscale on macOS
+- Enables SSH access through Tailscale
+- Displays Tailscale IP for remote connection
+- Provides phone setup instructions
+- Guides through connection testing
+
+**Usage:**
+Invoke with `/skill tailscale_setup` to start automated setup wizard.
+
 ## Instincts
 
 Located in `.claude/instincts/`:
@@ -49,7 +69,9 @@ Located in `.claude/instincts/`:
 .claude/
 ├── skills/
 │   ├── umbraco-github-branch-workflow.md    # Branch workflow enforcement
-│   └── task_logger/                          # Task logging skill
+│   ├── task_logger/                          # Task logging skill
+│   │   └── SKILL.md
+│   └── tailscale_setup/                      # Tailscale setup skill
 │       └── SKILL.md
 ├── instincts/
 │   └── umbraco-branch-workflow.md            # Branch workflow instinct
@@ -67,15 +89,24 @@ For any feature development in this project:
 5. ✅ Push to remote: `git push -u origin feat/your-feature`
 6. ✅ Create pull request for review
 
+For Tailscale setup:
+1. ✅ Invoke skill: `/skill tailscale_setup`
+2. ✅ Follow wizard prompts
+3. ✅ Complete phone setup
+4. ✅ Test remote access
+5. ✅ **Log task**: `/task_logger "Tailscale Setup - 2026-03-06"`
+
 ## Notes
 
 - Skills and instincts in this folder override global Claude Code settings
 - Project-specific configurations take precedence over global configurations
-- All task logs are stored in the `notes/` folder at project root
+- All task logs are stored in `notes/` folder at project root
 - These skills ensure consistent development practices across the project
+- Tailscale setup skill provides complete automation for remote access configuration
 
 ## Related Documentation
 
 - [Git Workflow](../README.md)
 - [Project Notes](../notes/)
 - [Development Guidelines](../docs/)
+- [Tailscale Setup](../.tailscale/)
