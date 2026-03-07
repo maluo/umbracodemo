@@ -1,0 +1,9 @@
+# Tailscale configuration files
+# These files contain sensitive information and should not be committed
+
+*.local
+*.key
+*.pem
+tailscale-state.json
+tailscale-metrics.log
+
