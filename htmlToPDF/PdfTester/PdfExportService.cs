@@ -150,9 +150,9 @@ public class PdfExportOptions
     public double MarginBottom { get; set; } = 50;
 
     /// <summary>
-    /// Row height in PDF units (default: 18 - Excel-like)
+    /// Row height in PDF units (default: 15 - Excel-like)
     /// </summary>
-    public double RowHeight { get; set; } = 18;
+    public double RowHeight { get; set; } = 15;
     /// <summary>
     /// Items per page (default: 25)
     /// </summary>
@@ -164,9 +164,9 @@ public class PdfExportOptions
     public string FontFamily { get; set; } = "Arial";
 
     /// <summary>
-    /// Font size for regular text (default: 10)
+    /// Font size for regular text (default: 9)
     /// </summary>
-    public double FontSize { get; set; } = 10;
+    public double FontSize { get; set; } = 9;
 
     /// <summary>
     /// Font size for headers (default: 10, Bold)
