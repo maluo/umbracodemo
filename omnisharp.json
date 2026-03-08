@@ -1,0 +1,23 @@
+{
+  "RoslynExtensionsOptions": {
+    "enableAnalyzersSupport": true,
+    "enableDecompilationSupport": true,
+    "enableImportCompletion": true,
+    "enableAsyncCompletion": true
+  },
+  "FormattingOptions": {
+    "enableEditorConfigSupport": true
+  },
+  "MsBuild": {
+    "LoadProjectsOnDemand": false,
+    "GenerateProjectsOnDemand": false
+  },
+  "RenameOptions": {
+    "RenameOverloads": true,
+    "RenameInComments": true,
+    "RenameInStrings": true
+  },
+  "DisableMSBuildDiagnosticWarning": true,
+  "LoggingLevel": "information",
+  "UseModernNet": true
+}

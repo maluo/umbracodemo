@@ -1,1 +1,60 @@
-{}
+{
+  // OmniSharp Configuration
+  "omnisharp.enableRoslynAnalyzers": true,
+  "omnisharp.enableEditorConfigSupport": true,
+  "omnisharp.enableImportCompletion": true,
+  "omnisharp.enableMsBuildLoadProjectsOnDemand": false,
+  "omnisharp.maxProjectResults": 250,
+  "omnisharp.useModernNet": true,
+
+  // C# Configuration
+  "csharp.format.enable": true,
+  "csharp.semanticHighlighting.enabled": true,
+  "csharp.inlayHints.parameters.enabled": true,
+  "csharp.inlayHints.types.enabled": true,
+  "csharp.inlayHints.typesForImplicitlyTypedVariables.enabled": true,
+
+  // Razor Configuration (Important for Umbraco)
+  "razor.languageServer.developerMessageLogging": true,
+  "razor.languageServer.debug": false,
+  "razor.languageServer.requiredComponents": {
+    "razor": "latest",
+    "csharp": "latest"
+  },
+
+  // General .NET settings
+  "dotnet.defaultSolution": "Umbraco13.sln",
+  "dotnet.codeLens.enableReferencesCodeLens": true,
+
+  // File associations
+  "files.associations": {
+    "*.cshtml": "razor",
+    "*.razor": "razor"
+  },
+
+  // IntelliSense and Autocomplete
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": true
+  },
+  "editor.suggest.showStatusBar": true,
+  "editor.suggestSelection": "first",
+  "editor.wordBasedSuggestions": true,
+
+  // File watching
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/bin/**": true,
+    "**/obj/**": true,
+    "**/.git/**": true
+  },
+
+  // Exclude from file search
+  "search.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/.vs": true,
+    "**/node_modules": true
+  }
+}
