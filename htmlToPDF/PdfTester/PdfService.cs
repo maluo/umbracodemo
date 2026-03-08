@@ -1,6 +1,6 @@
-using PdfSharp.Pdf;
-using PdfSharp.Drawing;
-using PdfSharp;
+using PdfSharpCore.Pdf;
+using PdfSharpCore.Drawing;
+using PdfSharpCore;
 using System.Reflection;
 using System.Linq;
 
@@ -115,7 +115,7 @@ internal class GenericPdfDocument<T>
         for (int pageIndex = 0; pageIndex < totalPages; pageIndex++)
         {
             var page = document.AddPage();
-            page.Size = PdfSharp.PageSize.A4;
+            page.Size = PageSize.A4;
             page.Width = PageWidth;
             page.Height = PageHeight;
 
