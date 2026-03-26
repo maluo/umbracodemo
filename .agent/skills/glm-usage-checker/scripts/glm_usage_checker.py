@@ -24,6 +24,14 @@ import urllib.request
 import urllib.error
 import ssl
 
+# Create SSL context for macOS
+try:
+    _ssl_context = ssl.create_default_context()
+    _ssl_context.check_hostname = False
+    _ssl_context.verify_mode = ssl.CERT_NONE
+except:
+    _ssl_context = None
+
 
 def http_get(url, headers):
     """Make HTTP GET request, return (status_code, response_data)"""
@@ -43,7 +51,7 @@ def http_get(url, headers):
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
         try:
-            with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+            with urllib.request.urlopen(req, timeout=10, context=_ssl_context) as resp:
                 data = resp.read().decode('utf-8')
                 try:
                     return resp.status, json.loads(data)
@@ -115,26 +123,14 @@ def get_zai_usage():
     if status == 200 and isinstance(data, dict) and data.get("success"):
         result["status"] = "ok"
         limits = data.get("data", {}).get("limits", [])
+        result["plan_level"] = data.get("data", {}).get("level", "unknown")
 
         for limit in limits:
             limit_type = limit.get("type")
             if limit_type == "TOKENS_LIMIT":
-                # Calculate total tokens based on unit (3 = 10^6 for million tokens)
-                unit = limit.get("unit", 0)
-                if unit == 3:
-                    unit_mult = 10 ** 6  # Million tokens
-                else:
-                    unit_mult = 10 ** unit
-                total = limit.get("number", 0) * unit_mult
+                # New API format uses unit/number/percentage
                 pct = limit.get("percentage", 0)
-                # Calculate used and remaining from percentage
-                used = int(total * pct / 100)
-                remaining = total - used
-
                 result["token_quota"] = {
-                    "limit": total,
-                    "used": used,
-                    "remaining": remaining,
                     "percentage": pct,
                 }
 
@@ -144,15 +140,26 @@ def get_zai_usage():
                     result["token_quota"]["resets_in"] = format_reset_time(reset_ts)
 
             elif limit_type == "TIME_LIMIT":
+                # TIME_LIMIT has usage details
                 total = limit.get("usage", 0)
                 used = limit.get("currentValue", 0)
                 remaining = limit.get("remaining", 0)
+                pct = limit.get("percentage", 0)
 
                 result["request_quota"] = {
                     "limit": total,
                     "used": used,
                     "remaining": remaining,
+                    "percentage": pct,
                 }
+
+                # Get usage details if available
+                usage_details = limit.get("usageDetails", [])
+                if usage_details:
+                    result["usage_details"] = [
+                        {"model": d.get("modelCode", "unknown"), "calls": d.get("usage", 0)}
+                        for d in usage_details
+                    ]
 
     # Get historical usage (last 7 days) for additional context
     now = datetime.now()
@@ -210,13 +217,17 @@ def generate_table_output(result):
     else:
         lines.append(f"\n[?] Status: {status}")
 
+    # Show plan level
+    if "plan_level" in result:
+        lines.append(f"\n[*] Plan Level: {result['plan_level']}")
+
     # Show token quota (5-hour window)
     if "token_quota" in result:
         tq = result["token_quota"]
+        pct = tq.get("percentage", 0)
         lines.append("\n[*] Token Quota (5-hour window):")
-        lines.append(f"  Total:      {format_number(tq['limit'])} tokens")
-        lines.append(f"  Used:       {format_number(tq['used'])} tokens ({tq['percentage']:.1f}%)")
-        lines.append(f"  Remaining:  {format_number(tq['remaining'])} tokens ({100 - tq['percentage']:.1f}%)")
+        lines.append(f"  Used: {pct}%")
+        lines.append(f"  Remaining: {100 - pct}%")
         if "resets_in" in tq:
             lines.append(f"  Resets in:  {tq['resets_in']}")
 
@@ -224,9 +235,14 @@ def generate_table_output(result):
     if "request_quota" in result:
         rq = result["request_quota"]
         lines.append("\n[*] Request Quota:")
-        lines.append(f"  Total:      {format_number(rq['limit'])}")
-        lines.append(f"  Used:       {format_number(rq['used'])}")
-        lines.append(f"  Remaining:  {format_number(rq['remaining'])}")
+        lines.append(f"  Used: {rq['used']} out of {rq['limit']}")
+        lines.append(f"  Remaining: {rq['remaining']} ({rq.get('percentage', 0)}%)")
+
+    # Show usage details
+    if "usage_details" in result:
+        lines.append("\n[*] Usage Details:")
+        for detail in result["usage_details"]:
+            lines.append(f"  - {detail['model']}: {detail['calls']} calls")
 
     # Show weekly usage
     if "weekly_usage" in result:

@@ -29,6 +29,17 @@ This skill allows you to check your GLM (Z.AI) token usage, remaining quota, and
 
 ### 2. Set Environment Variable
 
+**macOS/Linux (bash/zsh):**
+```bash
+export ZAI_API_KEY="your-api-key-here"
+```
+
+**For persistent settings (macOS/Linux):**
+```bash
+echo 'export ZAI_API_KEY="your-api-key-here"' >> ~/.zshrc  # or ~/.bashrc
+source ~/.zshrc
+```
+
 **Windows (PowerShell):**
 ```powershell
 $env:ZAI_API_KEY = "your-api-key-here"
@@ -37,11 +48,6 @@ $env:ZAI_API_KEY = "your-api-key-here"
 **Windows (Command Prompt):**
 ```cmd
 set ZAI_API_KEY=your-api-key-here
-```
-
-**Linux/macOS:**
-```bash
-export ZAI_API_KEY="your-api-key-here"
 ```
 
 **For persistent settings (Windows):**
@@ -55,47 +61,53 @@ export ZAI_API_KEY="your-api-key-here"
 
 Run the script to check your usage:
 
-```powershell
-python .agent/skills/glm-usage-checker/scripts/glm_usage_checker.py
+```bash
+python3 .agent/skills/glm-usage-checker/scripts/glm_usage_checker.py
 ```
 
 ### Display in Psmux Split Pane
 
 Open the usage table in a new psmux split pane:
 
-```powershell
-python .agent/skills/glm-usage-checker/scripts/glm_usage_checker.py --split
+```bash
+python3 .agent/skills/glm-usage-checker/scripts/glm_usage_checker.py --split
 # or
-python .agent/skills/glm-usage-checker/scripts/glm_usage_checker.py -s
+python3 .agent/skills/glm-usage-checker/scripts/glm_usage_checker.py -s
 ```
 
 ### Watch Mode (Auto-refresh)
 
 Continuously monitor usage with auto-refresh every 30 seconds:
 
-```powershell
-python .agent/skills/glm-usage-checker/scripts/glm_usage_checker.py --split --watch
+```bash
+python3 .agent/skills/glm-usage-checker/scripts/glm_usage_checker.py --split --watch
 ```
 
 ### Example Output
 
 ```
 GLM Token Usage Check
-====================
+==================================================
 
-Status: ✅ Connected
+[OK] Connected
 
-Token Quota (5-hour window):
-  Total:      5,000,000 tokens
-  Used:       2,345,678 tokens (46.9%)
-  Remaining:  2,654,322 tokens (53.1%)
-  Resets in: 2h 15m
+[*] Plan Level: lite
 
-Weekly Usage (last 7 days):
-  Total API calls:  1,234
-  Total tokens:     45,678,901
+[*] Token Quota (5-hour window):
+  Used: 15%
+  Remaining: 85%
+  Resets in: 1h 30m
 
-Dashboard: https://z.ai/manage-apikey/billing
+[*] Request Quota:
+  Used: 6 out of 100
+  Remaining: 94 (6%)
+
+[*] Usage Details:
+  - search-prime: 5 calls
+  - web-reader: 1 call
+  - zread: 0 calls
+
+[->] Dashboard: https://z.ai/manage-apikey/billing
 ```
 
 ## API Endpoints Used
