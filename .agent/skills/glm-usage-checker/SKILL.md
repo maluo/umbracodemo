@@ -113,6 +113,11 @@ Dashboard: https://z.ai/manage-apikey/billing
 - Check that your API key is valid and active
 - Ensure your subscription is active at [z.ai/billing](https://z.ai/manage-apikey/billing)
 
+### Error: SSL: CERTIFICATE_VERIFY_FAILED (macOS)
+- This occurs on macOS when Python doesn't have SSL certificates properly configured
+- The script has been updated to handle this by disabling certificate verification
+- Make sure you're using `python3` not `python` (which may be Python 2.7)
+
 ### Token expired
 - If using an OAuth token, you may need to refresh it
 - Check your account status on the dashboard

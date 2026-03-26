@@ -22,6 +22,7 @@ except ImportError:
 # Always import urllib for fallback
 import urllib.request
 import urllib.error
+import ssl
 
 
 def http_get(url, headers):
@@ -37,8 +38,12 @@ def http_get(url, headers):
             return 0, str(e)
     else:
         req = urllib.request.Request(url, headers=headers)
+        # Create SSL context that bypasses cert verification (macOS compatibility)
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
                 data = resp.read().decode('utf-8')
                 try:
                     return resp.status, json.loads(data)
@@ -114,10 +119,17 @@ def get_zai_usage():
         for limit in limits:
             limit_type = limit.get("type")
             if limit_type == "TOKENS_LIMIT":
-                total = limit.get("usage", 0)
-                used = limit.get("currentValue", 0)
-                remaining = limit.get("remaining", 0)
+                # Calculate total tokens based on unit (3 = 10^6 for million tokens)
+                unit = limit.get("unit", 0)
+                if unit == 3:
+                    unit_mult = 10 ** 6  # Million tokens
+                else:
+                    unit_mult = 10 ** unit
+                total = limit.get("number", 0) * unit_mult
                 pct = limit.get("percentage", 0)
+                # Calculate used and remaining from percentage
+                used = int(total * pct / 100)
+                remaining = total - used
 
                 result["token_quota"] = {
                     "limit": total,

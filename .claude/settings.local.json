@@ -6,5 +6,10 @@
       "Bash(cd:*)",
       "Bash(python:*)"
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "echo \"$(git branch --show-current 2>/dev/null | sed 's/^/🌿 /') $(basename $(pwd) | sed 's/^/📁 /')\"",
+    "padding": 1
   }
 }
