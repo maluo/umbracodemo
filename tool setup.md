@@ -79,6 +79,13 @@ npm won't work out
 
 - /usr/local/bin
 
-- 
+## NVIM installation
+
+
+- lazy vim official
+
+- plugins neotree, lazygit
+
+- brew install lazygit
 
 
