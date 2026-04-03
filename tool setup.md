@@ -88,4 +88,10 @@ npm won't work out
 
 - brew install lazygit
 
+##  Claude Hud Setup
 
+- Install Claude Hud
+
+- Run Claude Hud Setup and Configuration
+
+- Ask Claude to configure status line for you
