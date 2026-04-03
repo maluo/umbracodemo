@@ -2,7 +2,6 @@
   // OmniSharp Configuration
   "omnisharp.enableRoslynAnalyzers": true,
   "omnisharp.enableEditorConfigSupport": true,
-  "omnisharp.enableImportCompletion": true,
   "omnisharp.enableMsBuildLoadProjectsOnDemand": false,
   "omnisharp.maxProjectResults": 250,
   "omnisharp.useModernNet": true,
@@ -10,8 +9,6 @@
   // C# Configuration
   "csharp.format.enable": true,
   "csharp.semanticHighlighting.enabled": true,
-  "csharp.inlayHints.parameters.enabled": true,
-  "csharp.inlayHints.types.enabled": true,
   "csharp.inlayHints.typesForImplicitlyTypedVariables.enabled": true,
 
   // Razor Configuration (Important for Umbraco)
@@ -40,7 +37,7 @@
   },
   "editor.suggest.showStatusBar": true,
   "editor.suggestSelection": "first",
-  "editor.wordBasedSuggestions": true,
+  "editor.wordBasedSuggestions": "matchingDocuments",
 
   // File watching
   "files.watcherExclude": {
@@ -56,5 +53,8 @@
     "**/obj": true,
     "**/.vs": true,
     "**/node_modules": true
-  }
+  },
+  "dotnet.inlayHints.enableInlayHintsForParameters": true,
+  "csharp.inlayHints.enableInlayHintsForTypes": true,
+  "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true
 }
