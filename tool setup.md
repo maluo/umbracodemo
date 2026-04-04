@@ -95,3 +95,15 @@ npm won't work out
 - Run Claude Hud Setup and Configuration
 
 - Ask Claude to configure status line for you
+
+## Claude Plugins Setup
+
+- Superpower
+
+- OMC - Oh My Claude Team
+
+- Everything Claude Code - nice skills from Hackerthon
+
+- Claude how to: https://github.com/luongnv89/claude-howto
+
+  - Everything you need to know about claude

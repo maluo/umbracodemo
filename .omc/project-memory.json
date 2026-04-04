@@ -1,0 +1,174 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1775312703247,
+  "projectRoot": "/Users/luoma/Downloads/backup Nov 22 2025/PVE/Umbraco/umbracodemo",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "API": {
+      "path": "API",
+      "purpose": "API routes",
+      "fileCount": 1,
+      "lastAccessed": 1775312703170,
+      "keyFiles": [
+        "FundsApi.sln"
+      ]
+    },
+    "OCR Helper": {
+      "path": "OCR Helper",
+      "purpose": null,
+      "fileCount": 4,
+      "lastAccessed": 1775312703185,
+      "keyFiles": [
+        "install_dependencies.bat",
+        "ocr_fallback.ps1",
+        "ocr_helper.py",
+        "requirements.txt"
+      ]
+    },
+    "SVG Helper": {
+      "path": "SVG Helper",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1775312703198,
+      "keyFiles": [
+        "index.js",
+        "package-lock.json",
+        "package.json"
+      ]
+    },
+    "UIDemo": {
+      "path": "UIDemo",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1775312703201,
+      "keyFiles": [
+        "index.html",
+        "index.js",
+        "site.css"
+      ]
+    },
+    "Umbraco13": {
+      "path": "Umbraco13",
+      "purpose": null,
+      "fileCount": 12,
+      "lastAccessed": 1775312703203,
+      "keyFiles": [
+        "Program.cs",
+        "Umbraco13.csproj",
+        "appsettings-schema.IpWhitelist.json",
+        "appsettings-schema.Umbraco.Cms.json",
+        "appsettings-schema.Umbraco.Forms.json"
+      ]
+    },
+    "Umbraco13.Integration.Tests": {
+      "path": "Umbraco13.Integration.Tests",
+      "purpose": null,
+      "fileCount": 8,
+      "lastAccessed": 1775312703205,
+      "keyFiles": [
+        "NavHistoryIntegrationTests.cs",
+        "Umbraco13.Integration.Tests.csproj",
+        "appsettings-schema.Umbraco.Cms.json",
+        "appsettings-schema.Umbraco.Forms.json",
+        "appsettings-schema.Umbraco.Licenses.json"
+      ]
+    },
+    "htmlToPDF": {
+      "path": "htmlToPDF",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1775312703207,
+      "keyFiles": [
+        "htmlToPDF.sln"
+      ]
+    },
+    "notes": {
+      "path": "notes",
+      "purpose": null,
+      "fileCount": 16,
+      "lastAccessed": 1775312703209,
+      "keyFiles": [
+        "Fix_Delivery_API_Service_and_Create_Funds_ViewComponent_2026-02-16.md",
+        "Fix_Delivery_API_Unauthorized_Error_2026-02-16.md",
+        "Git_Cherry_Pick_and_Interactive_Rebase_Tutorial_2026-04-04.md",
+        "Git_Cherry_Pick_and_Interactive_Rebase_Tutorial_2026-04-04.pdf",
+        "Image to SVG Conversion 2026-02-20.md"
+      ]
+    },
+    "resources": {
+      "path": "resources",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1775312703210,
+      "keyFiles": [
+        "startbootstrap-freelancer-gh-pages.zip"
+      ]
+    },
+    "Umbraco13/Controllers": {
+      "path": "Umbraco13/Controllers",
+      "purpose": "Controllers",
+      "fileCount": 5,
+      "lastAccessed": 1775312703218,
+      "keyFiles": [
+        "ErrorController.cs",
+        "FundsController.cs",
+        "FundsHtmlPdfController.cs"
+      ]
+    },
+    "Umbraco13/Data": {
+      "path": "Umbraco13/Data",
+      "purpose": "Data files",
+      "fileCount": 1,
+      "lastAccessed": 1775312703219,
+      "keyFiles": [
+        "AppDbContext.cs"
+      ]
+    },
+    "Umbraco13.Integration.Tests/bin": {
+      "path": "Umbraco13.Integration.Tests/bin",
+      "purpose": "Executable scripts",
+      "fileCount": 0,
+      "lastAccessed": 1775312703222,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [],
+  "userDirectives": []
+}
