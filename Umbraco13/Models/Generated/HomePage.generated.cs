@@ -50,12 +50,12 @@ namespace Umbraco.Cms.Web.Common.PublishedModels
 		// properties
 
 		///<summary>
-		/// BodyBlockList
+		/// Body
 		///</summary>
 		[global::System.CodeDom.Compiler.GeneratedCodeAttribute("Umbraco.ModelsBuilder.Embedded", "13.10.0+c2890e1")]
 		[global::System.Diagnostics.CodeAnalysis.MaybeNull]
-		[ImplementPropertyType("bodyBlockList")]
-		public virtual global::Umbraco.Cms.Core.Models.Blocks.BlockListModel BodyBlockList => this.Value<global::Umbraco.Cms.Core.Models.Blocks.BlockListModel>(_publishedValueFallback, "bodyBlockList");
+		[ImplementPropertyType("body")]
+		public virtual global::Umbraco.Cms.Core.Models.Blocks.BlockGridModel Body => this.Value<global::Umbraco.Cms.Core.Models.Blocks.BlockGridModel>(_publishedValueFallback, "body");
 
 		///<summary>
 		/// Header Content: Enter the content to display in header
