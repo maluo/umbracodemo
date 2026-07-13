@@ -1,0 +1,12 @@
+.token-box {
+  background: lightblue;
+  cursor: pointer;
+}
+
+.token-box.error {
+  background: red !important;
+}
+
+.token-box:hover {
+  background: lightcoral;
+}

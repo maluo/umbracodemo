@@ -1,0 +1,8 @@
+{
+    "id": "Knowit.Umbraco.TokenReplacement",
+    "name": "Knowit.Umbraco.TokenReplacement",
+    "allowPackageTelemetry": true,
+    "javascript": ["~/app_plugins/knowit.umbraco.tokenreplacement.Frontend/gui.js"],
+    "css": ["~/app_plugins/knowit.umbraco.tokenreplacement.Frontend/style.css"],
+
+}

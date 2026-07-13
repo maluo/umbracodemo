@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Knowit.Umbraco.TokenReplacement.Middleware;
 using Umbraco.Cms.Web.Common.Routing;
 using Umbraco13.Middleware;
 using PdfSharp.Fonts;
@@ -40,7 +40,6 @@ builder.Services.AddScoped<Umbraco13.Services.IExcelExportService, Umbraco13.Ser
 builder.Services.AddScoped<Umbraco13.Services.INavHistoryService, Umbraco13.Services.NavHistoryService>();
 builder.Services.AddSingleton<Umbraco13.Services.IFundsJsonService, Umbraco13.Services.FundsJsonService>();
     builder.Services.AddScoped<Umbraco13.Services.IHtmlPdfPrintService, Umbraco13.Services.HtmlPdfPrintService>();
-builder.Services.AddScoped<Umbraco13.Services.IHtmlToPdfConverter, Umbraco13.Services.PdfSharpHtmlConverter>();
 
 builder.Services.AddHttpClient();
 
@@ -85,6 +84,8 @@ app.UseUmbraco()
     {
         u.UseBackOffice();
         u.UseWebsite();
+        u.AppBuilder.UseMiddleware<TokenReplacementMiddleWare>(); // this one!!!
+
     })
     .WithEndpoints(u =>
     {

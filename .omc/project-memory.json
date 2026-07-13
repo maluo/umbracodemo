@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1775312703247,
+  "lastScanned": 1777597567149,
   "projectRoot": "/Users/luoma/Downloads/backup Nov 22 2025/PVE/Umbraco/umbracodemo",
   "techStack": {
     "languages": [
@@ -45,7 +45,7 @@
       "path": "API",
       "purpose": "API routes",
       "fileCount": 1,
-      "lastAccessed": 1775312703170,
+      "lastAccessed": 1777597567035,
       "keyFiles": [
         "FundsApi.sln"
       ]
@@ -54,7 +54,7 @@
       "path": "OCR Helper",
       "purpose": null,
       "fileCount": 4,
-      "lastAccessed": 1775312703185,
+      "lastAccessed": 1777597567045,
       "keyFiles": [
         "install_dependencies.bat",
         "ocr_fallback.ps1",
@@ -66,7 +66,7 @@
       "path": "SVG Helper",
       "purpose": null,
       "fileCount": 3,
-      "lastAccessed": 1775312703198,
+      "lastAccessed": 1777597567063,
       "keyFiles": [
         "index.js",
         "package-lock.json",
@@ -77,7 +77,7 @@
       "path": "UIDemo",
       "purpose": null,
       "fileCount": 3,
-      "lastAccessed": 1775312703201,
+      "lastAccessed": 1777597567087,
       "keyFiles": [
         "index.html",
         "index.js",
@@ -88,7 +88,7 @@
       "path": "Umbraco13",
       "purpose": null,
       "fileCount": 12,
-      "lastAccessed": 1775312703203,
+      "lastAccessed": 1777597567087,
       "keyFiles": [
         "Program.cs",
         "Umbraco13.csproj",
@@ -101,7 +101,7 @@
       "path": "Umbraco13.Integration.Tests",
       "purpose": null,
       "fileCount": 8,
-      "lastAccessed": 1775312703205,
+      "lastAccessed": 1777597567088,
       "keyFiles": [
         "NavHistoryIntegrationTests.cs",
         "Umbraco13.Integration.Tests.csproj",
@@ -114,7 +114,7 @@
       "path": "htmlToPDF",
       "purpose": null,
       "fileCount": 2,
-      "lastAccessed": 1775312703207,
+      "lastAccessed": 1777597567099,
       "keyFiles": [
         "htmlToPDF.sln"
       ]
@@ -123,7 +123,7 @@
       "path": "notes",
       "purpose": null,
       "fileCount": 16,
-      "lastAccessed": 1775312703209,
+      "lastAccessed": 1777597567108,
       "keyFiles": [
         "Fix_Delivery_API_Service_and_Create_Funds_ViewComponent_2026-02-16.md",
         "Fix_Delivery_API_Unauthorized_Error_2026-02-16.md",
@@ -136,7 +136,7 @@
       "path": "resources",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1775312703210,
+      "lastAccessed": 1777597567115,
       "keyFiles": [
         "startbootstrap-freelancer-gh-pages.zip"
       ]
@@ -145,7 +145,7 @@
       "path": "Umbraco13/Controllers",
       "purpose": "Controllers",
       "fileCount": 5,
-      "lastAccessed": 1775312703218,
+      "lastAccessed": 1777597567126,
       "keyFiles": [
         "ErrorController.cs",
         "FundsController.cs",
@@ -156,7 +156,7 @@
       "path": "Umbraco13/Data",
       "purpose": "Data files",
       "fileCount": 1,
-      "lastAccessed": 1775312703219,
+      "lastAccessed": 1777597567126,
       "keyFiles": [
         "AppDbContext.cs"
       ]
@@ -165,7 +165,7 @@
       "path": "Umbraco13.Integration.Tests/bin",
       "purpose": "Executable scripts",
       "fileCount": 0,
-      "lastAccessed": 1775312703222,
+      "lastAccessed": 1777597567132,
       "keyFiles": []
     }
   },

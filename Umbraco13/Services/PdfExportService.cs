@@ -384,8 +384,8 @@ public class PdfExportService : IPdfExportService
 
         var gfx = XGraphics.FromPdfPage(page);
         var font = new XFont(options.FontFamily, options.FontSize);
-        var fontBold = new XFont(options.FontFamily, options.HeaderFontSize, XFontStyleEx.Bold);
-        var fontHeader = new XFont(options.FontFamily, options.TitleFontSize, XFontStyleEx.Bold);
+        var fontBold = new XFont(options.FontFamily, options.HeaderFontSize, XFontStyle.Bold);
+        var fontHeader = new XFont(options.FontFamily, options.TitleFontSize, XFontStyle.Bold);
         var fontFooter = new XFont(options.FontFamily, options.FooterFontSize);
         var fontPageNum = new XFont(options.FontFamily, options.PageNumberFontSize);
 
@@ -671,7 +671,7 @@ public class PdfExportService : IPdfExportService
     private void DrawContinuationPageHeader(PdfPage page, XGraphics gfx, PdfExportOptions options, XFont font)
     {
         // Simple centered "(Continued)" message
-        gfx.DrawString("(Continued)", new XFont(options.FontFamily, 12, XFontStyleEx.Bold), XBrushes.DarkGray,
+        gfx.DrawString("(Continued)", new XFont(options.FontFamily, 12, XFontStyle.Bold), XBrushes.DarkGray,
             new XRect(0, 20, page.Width, 20), XStringFormats.TopCenter);
     }
 
@@ -846,9 +846,9 @@ public class PdfExportService : IPdfExportService
         XFont rowFont;
         if (options.LastRow!.FontStyle != null)
         {
-            var fontStyle = XFontStyleEx.Regular;
-            if (options.LastRow.FontStyle.Bold) fontStyle |= XFontStyleEx.Bold;
-            if (options.LastRow.FontStyle.Italic) fontStyle |= XFontStyleEx.Italic;
+            var fontStyle = XFontStyle.Regular;
+            if (options.LastRow.FontStyle.Bold) fontStyle |= XFontStyle.Bold;
+            if (options.LastRow.FontStyle.Italic) fontStyle |= XFontStyle.Italic;
             rowFont = new XFont(
                 options.LastRow.FontStyle.FontFamily,
                 options.LastRow.FontStyle.FontSize,

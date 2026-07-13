@@ -1,11 +1,19 @@
-﻿@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage<ContentModels.HomePage>
+@using Umbraco.Cms.Web.Common.PublishedModels;
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage<ContentModels.HomePage>
+@using ContentModels = Umbraco.Cms.Web.Common.PublishedModels;
 @{
     Layout = "Main.cshtml";
 }
 
 @await Html.PartialAsync("nav")
 @await Html.PartialAsync("header")
+
+@foreach (var block in Model.BodyBlockList)
+{
+    block.Content.GetProperty("bodyItemText");
+}
 @* @await Component.InvokeAsync("DeliveryApiFunds", new { guid = "4b06892d-6ccb-40f3-a18e-89b5d019d5fa" }) *@
+
 @await Component.InvokeAsync("NavHistory", new { tickerCode = "VTSMX" })
 @await Component.InvokeAsync("FundsTable")
 @await Html.PartialAsync("portfolio")
